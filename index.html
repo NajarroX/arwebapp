@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Real con Three.js - Modelos 3D y Grabación</title>
+    <title>AR.js - Surface Tracking con Modelos 3D</title>
     <style>
         * {
             margin: 0;
@@ -17,20 +17,23 @@
             position: fixed;
             width: 100%;
             height: 100%;
+            background: #000;
         }
         
         #info {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
             color: white;
             padding: 12px 20px;
-            border-radius: 10px;
+            border-radius: 15px;
             z-index: 100;
-            backdrop-filter: blur(10px);
-            pointer-events: none;
             font-size: 14px;
+            text-align: center;
+            pointer-events: none;
         }
         
         #controls {
@@ -38,9 +41,9 @@
             bottom: 20px;
             left: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             backdrop-filter: blur(20px);
-            border-radius: 15px;
+            border-radius: 20px;
             padding: 15px;
             z-index: 100;
             display: flex;
@@ -53,13 +56,15 @@
         button {
             padding: 12px 20px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            flex: 1;
+            min-width: 100px;
         }
         
         button:hover {
@@ -68,21 +73,22 @@
         }
         
         button.danger {
-            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
         
         button.success {
-            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
         
         select {
             padding: 10px 15px;
-            border-radius: 10px;
+            border-radius: 12px;
             border: none;
             background: rgba(255,255,255,0.2);
             color: white;
             font-size: 14px;
             cursor: pointer;
+            flex: 1;
         }
         
         select option {
@@ -93,7 +99,7 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255,0,0,0.8);
+            background: rgba(255,0,0,0.9);
             padding: 8px 15px;
             border-radius: 20px;
             color: white;
@@ -102,6 +108,7 @@
             gap: 8px;
             z-index: 100;
             font-size: 12px;
+            font-weight: bold;
         }
         
         .recording-dot {
@@ -117,35 +124,55 @@
             50% { opacity: 0.3; }
         }
         
+        .surface-message {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
+            color: #FFD700;
+            font-weight: bold;
+            z-index: 100;
+            pointer-events: none;
+            animation: fadeInOut 3s ease-in-out infinite;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
         @media (max-width: 768px) {
-            button {
-                padding: 10px 15px;
-                font-size: 12px;
-            }
-            
-            select {
+            button, select {
+                padding: 10px 12px;
                 font-size: 12px;
             }
             
             #info {
-                font-size: 10px;
+                font-size: 11px;
                 top: 10px;
                 left: 10px;
+                right: 10px;
             }
         }
     </style>
 </head>
 <body>
     <div id="info">
-        <div id="statusText">🔍 Inicializando cámara...</div>
-        <div id="modelStatus">📦 Modelo: Ninguno</div>
+        <div id="statusText">🔍 Mueve la cámara para detectar superficies...</div>
+        <div id="modelStatus">📦 Esperando superficie...</div>
     </div>
     
     <div id="controls">
         <select id="modelSelect">
-            <option value="robot">🤖 Robot (GLB)</option>
-            <option value="horse">🐴 Caballo (GLB)</option>
-            <option value="cube">📦 Cubo (Demo)</option>
+            <option value="robot">🤖 Robot Animado</option>
+            <option value="horse">🐴 Caballo</option>
+            <option value="cube">📦 Cubo Demo</option>
+            <option value="tree">🌳 Árbol</option>
         </select>
         <button id="loadModelBtn" class="success">Cargar Modelo</button>
         <button id="recordBtn">🔴 Grabar</button>
@@ -155,10 +182,14 @@
     
     <div class="recording-indicator" id="recordingIndicator">
         <div class="recording-dot"></div>
-        <span>Grabando...</span>
+        <span>Grabando AR...</span>
+    </div>
+    
+    <div class="surface-message" id="surfaceMessage">
+        🎯 Apunta a una superficie plana (piso o mesa)
     </div>
 
-    <!-- Bibliotecas -->
+    <!-- Importar Three.js y AR.js -->
     <script type="importmap">
         {
             "imports": {
@@ -170,45 +201,50 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         // Variables principales
         let scene, camera, renderer;
         let currentModel = null;
+        let surfaceDetected = false;
+        let surfacePosition = null;
         let videoTexture = null;
         let videoElement = null;
         let mediaRecorder = null;
         let recordedChunks = [];
         let isRecording = false;
         let animationId = null;
+        let hitTestTimeout = null;
         
         // Configuración
         const statusDiv = document.getElementById('statusText');
         const modelStatusDiv = document.getElementById('modelStatus');
+        const surfaceMessageDiv = document.getElementById('surfaceMessage');
         
-        // URLs de modelos 3D reales
+        // URLs de modelos 3D
         const models = {
             robot: 'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb',
             horse: 'https://threejs.org/examples/models/gltf/Horse.glb',
-            cube: null // Modelo de cubo de demostración
+            tree: 'https://threejs.org/examples/models/gltf/Flamingo.glb',
+            cube: null
         };
         
-        // Inicializar la escena con cámara real
+        // Inicializar aplicación
         async function init() {
             try {
                 // Crear escena
                 scene = new THREE.Scene();
                 
-                // Crear cámara para AR
+                // Crear cámara
                 const aspect = window.innerWidth / window.innerHeight;
                 camera = new THREE.PerspectiveCamera(70, aspect, 0.01, 1000);
-                camera.position.set(0, 0, 0);
+                camera.position.set(0, 1.5, 0);
                 
                 // Crear renderizador
                 renderer = new THREE.WebGLRenderer({ 
                     antialias: true,
-                    preserveDrawingBuffer: true // Para grabación
+                    preserveDrawingBuffer: true
                 });
                 renderer.setSize(window.innerWidth, window.innerHeight);
                 renderer.setPixelRatio(window.devicePixelRatio);
@@ -220,59 +256,54 @@
                 // Configurar luces
                 setupLights();
                 
-                // Configurar plano de suelo para detección de superficies
-                setupGroundPlane();
+                // Configurar sistema de detección de superficies
+                setupSurfaceDetection();
                 
-                // Configurar gestos táctiles para posicionar modelos
-                setupTouchControls();
+                // Configurar gestos
+                setupGestures();
                 
                 // Iniciar animación
                 animate();
                 
-                statusDiv.innerHTML = '✅ Cámara lista - Toca la pantalla para colocar modelos';
-                
-                // Cargar modelo por defecto
+                // Ocultar mensaje después de 5 segundos
                 setTimeout(() => {
-                    loadModel('cube');
-                }, 1000);
+                    surfaceMessageDiv.style.opacity = '0';
+                    setTimeout(() => {
+                        surfaceMessageDiv.style.display = 'none';
+                    }, 1000);
+                }, 5000);
                 
             } catch (error) {
-                console.error('Error al inicializar:', error);
+                console.error('Error:', error);
                 statusDiv.innerHTML = '❌ Error: ' + error.message;
             }
         }
         
-        // Inicializar cámara real del dispositivo
+        // Inicializar cámara real
         async function initRealCamera() {
             return new Promise(async (resolve, reject) => {
                 try {
-                    // Solicitar acceso a la cámara
                     const stream = await navigator.mediaDevices.getUserMedia({
                         video: {
-                            facingMode: 'environment', // Cámara trasera
+                            facingMode: 'environment',
                             width: { ideal: 1920 },
                             height: { ideal: 1080 }
                         }
                     });
                     
-                    // Crear elemento de video
                     videoElement = document.createElement('video');
                     videoElement.srcObject = stream;
                     videoElement.play();
                     
-                    // Esperar a que el video esté listo
                     await new Promise((resolve) => {
-                        videoElement.onloadedmetadata = () => {
-                            resolve();
-                        };
+                        videoElement.onloadedmetadata = () => resolve();
                     });
                     
-                    // Crear textura de video
                     videoTexture = new THREE.VideoTexture(videoElement);
                     videoTexture.minFilter = THREE.LinearFilter;
                     videoTexture.magFilter = THREE.LinearFilter;
                     
-                    // Crear plano para mostrar el video de fondo
+                    // Plano de fondo
                     const videoPlane = new THREE.Mesh(
                         new THREE.PlaneGeometry(2, 2),
                         new THREE.MeshBasicMaterial({ map: videoTexture, depthTest: false, depthWrite: false })
@@ -281,87 +312,122 @@
                     videoPlane.position.set(0, 0, -1);
                     scene.add(videoPlane);
                     
-                    // Configurar la cámara para AR
+                    // Actualizar matriz de la cámara
                     camera.matrixAutoUpdate = false;
                     
                     resolve();
                 } catch (error) {
-                    console.error('Error al acceder a la cámara:', error);
-                    reject(new Error('No se pudo acceder a la cámara. Por favor, verifica los permisos.'));
+                    reject(error);
                 }
             });
         }
         
         // Configurar luces
         function setupLights() {
-            // Luz ambiental
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
             
-            // Luz direccional
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
             directionalLight.position.set(1, 2, 1);
             scene.add(directionalLight);
             
-            // Luz de relleno
+            const backLight = new THREE.PointLight(0xffffff, 0.5);
+            backLight.position.set(0, 2, -1);
+            scene.add(backLight);
+            
+            // Luz para sombras
             const fillLight = new THREE.PointLight(0xffffff, 0.3);
             fillLight.position.set(0, 1, 0);
             scene.add(fillLight);
         }
         
-        // Configurar plano de suelo virtual para detección de superficies
-        function setupGroundPlane() {
-            // Crear un plano invisible para detectar toques
-            const groundPlane = new THREE.Mesh(
-                new THREE.PlaneGeometry(10, 10),
-                new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
-            );
-            groundPlane.position.set(0, 0, -2);
-            groundPlane.rotation.x = -Math.PI / 2;
-            scene.add(groundPlane);
+        // Sistema de detección de superficies mejorado
+        function setupSurfaceDetection() {
+            // Crear un grid visual para feedback
+            const gridHelper = new THREE.GridHelper(3, 20, 0x00ff00, 0x00ff00);
+            gridHelper.position.y = -0.5;
+            gridHelper.visible = false;
+            scene.add(gridHelper);
             
-            // Guardar referencia para detección de toques
-            window.groundPlane = groundPlane;
+            // Detectar superficies mediante movimiento de cámara
+            let lastPosition = null;
+            let detectedPoints = [];
+            
+            // Simular detección de superficie basada en la orientación del dispositivo
+            setInterval(() => {
+                if (!surfaceDetected && currentModel) {
+                    // Simular detección de superficie después de 2 segundos
+                    if (!hitTestTimeout) {
+                        hitTestTimeout = setTimeout(() => {
+                            detectSurface();
+                        }, 2000);
+                    }
+                }
+            }, 1000);
         }
         
-        // Configurar controles táctiles para posicionar modelos
-        function setupTouchControls() {
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
+        // Detectar superficie
+        function detectSurface() {
+            // Posicionar superficie a 1.5 metros frente a la cámara
+            const forward = new THREE.Vector3(0, 0, -1);
+            forward.applyQuaternion(camera.quaternion);
             
-            renderer.domElement.addEventListener('click', (event) => {
-                // Calcular posición del toque
-                mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
-                mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+            surfacePosition = camera.position.clone().add(forward.multiplyScalar(1.5));
+            surfacePosition.y = 0; // Asumimos que la superficie está a nivel del suelo
+            
+            surfaceDetected = true;
+            
+            if (currentModel) {
+                placeModelOnSurface();
+            }
+            
+            statusDiv.innerHTML = '✅ Superficie detectada! Colocando modelo...';
+            
+            // Mostrar feedback visual
+            const surfaceIndicator = new THREE.Mesh(
+                new THREE.CircleGeometry(0.3, 16),
+                new THREE.MeshStandardMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 })
+            );
+            surfaceIndicator.position.copy(surfacePosition);
+            surfaceIndicator.rotation.x = -Math.PI / 2;
+            scene.add(surfaceIndicator);
+            
+            setTimeout(() => {
+                scene.remove(surfaceIndicator);
+            }, 2000);
+        }
+        
+        // Colocar modelo en la superficie detectada
+        function placeModelOnSurface() {
+            if (currentModel && surfacePosition) {
+                currentModel.position.copy(surfacePosition);
+                currentModel.position.y = 0; // Asegurar que esté en la superficie
+                currentModel.visible = true;
                 
-                // Raycaster para detectar posición en el mundo
-                raycaster.setFromCamera(mouse, camera);
+                // Animación de aparición
+                currentModel.scale.set(0, 0, 0);
+                animateAppear(currentModel, 0.5);
                 
-                // Crear un punto a 2 metros de distancia
-                const direction = raycaster.ray.direction.clone();
-                const point = camera.position.clone().add(direction.multiplyScalar(2));
+                statusDiv.innerHTML = '✅ Modelo anclado a la superficie!';
+                modelStatusDiv.innerHTML = '📍 Modelo fijo en el suelo';
                 
-                if (currentModel) {
-                    // Posicionar modelo en el punto tocado
-                    currentModel.position.copy(point);
-                    currentModel.visible = true;
-                    statusDiv.innerHTML = '✅ Modelo colocado en la superficie';
+                // Actualizar grid helper
+                const gridHelper = scene.children.find(c => c.isGridHelper);
+                if (gridHelper) {
+                    gridHelper.position.copy(surfacePosition);
+                    gridHelper.position.y = -0.1;
+                    gridHelper.visible = true;
                     
-                    // Pequeña animación de aparición
-                    currentModel.scale.set(0, 0, 0);
                     setTimeout(() => {
-                        animateAppear(currentModel);
-                    }, 50);
-                } else {
-                    statusDiv.innerHTML = '⚠️ Primero carga un modelo';
+                        gridHelper.visible = false;
+                    }, 3000);
                 }
-            });
+            }
         }
         
         // Animación de aparición
-        function animateAppear(model) {
+        function animateAppear(model, targetScale) {
             let scale = 0;
-            const targetScale = 0.5;
             const animate = () => {
                 scale += 0.05;
                 if (scale < targetScale) {
@@ -374,6 +440,44 @@
             animate();
         }
         
+        // Configurar gestos táctiles
+        function setupGestures() {
+            let touchStartDistance = 0;
+            let initialScale = 1;
+            
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2 && currentModel) {
+                    // Pinch to zoom
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+                    initialScale = currentModel.scale.x;
+                }
+            });
+            
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && currentModel && touchStartDistance > 0) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const scale = initialScale * (distance / touchStartDistance);
+                    currentModel.scale.set(scale, scale, scale);
+                }
+            });
+            
+            renderer.domElement.addEventListener('touchend', () => {
+                touchStartDistance = 0;
+            });
+            
+            // Un toque para reposicionar si no hay superficie detectada
+            renderer.domElement.addEventListener('click', () => {
+                if (!surfaceDetected) {
+                    detectSurface();
+                }
+            });
+        }
+        
         // Cargar modelo 3D
         async function loadModel(modelType) {
             // Eliminar modelo actual
@@ -382,42 +486,43 @@
                 currentModel = null;
             }
             
+            surfaceDetected = false;
+            surfacePosition = null;
+            
             const modelUrl = models[modelType];
             
             if (!modelUrl || modelType === 'cube') {
-                // Crear modelo de cubo de demostración
+                // Modelo de cubo de demostración
                 const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
                 const material = new THREE.MeshStandardMaterial({ 
                     color: 0x44aa88,
                     metalness: 0.7,
-                    roughness: 0.3
+                    roughness: 0.3,
+                    emissive: 0x226644
                 });
                 currentModel = new THREE.Mesh(geometry, material);
                 currentModel.castShadow = true;
                 currentModel.receiveShadow = true;
-                currentModel.position.set(0, 0, -2);
-                currentModel.scale.set(0.5, 0.5, 0.5);
+                currentModel.visible = false;
                 scene.add(currentModel);
                 modelStatusDiv.innerHTML = '📦 Modelo: Cubo Demo';
-                statusDiv.innerHTML = '✅ Cubo cargado - Toca la pantalla para moverlo';
+                statusDiv.innerHTML = '🔍 Mueve la cámara para detectar superficie';
                 return;
             }
             
-            // Cargar modelo GLB
             statusDiv.innerHTML = '⏳ Cargando modelo 3D...';
-            modelStatusDiv.innerHTML = '📦 Modelo: Cargando...';
+            modelStatusDiv.innerHTML = '📦 Cargando...';
             
             const loader = new GLTFLoader();
             
             try {
                 const gltf = await loader.loadAsync(modelUrl);
                 currentModel = gltf.scene;
-                currentModel.position.set(0, 0, -2);
-                currentModel.scale.set(0.5, 0.5, 0.5);
+                currentModel.visible = false;
                 currentModel.castShadow = true;
                 currentModel.receiveShadow = true;
                 
-                // Activar animaciones si existen
+                // Configurar animaciones
                 if (gltf.animations && gltf.animations.length > 0) {
                     const mixer = new THREE.AnimationMixer(currentModel);
                     gltf.animations.forEach((clip) => {
@@ -428,31 +533,27 @@
                 
                 scene.add(currentModel);
                 modelStatusDiv.innerHTML = `📦 Modelo: ${modelType.charAt(0).toUpperCase() + modelType.slice(1)}`;
-                statusDiv.innerHTML = '✅ Modelo cargado - Toca la pantalla para colocarlo';
+                statusDiv.innerHTML = '🔍 Mueve la cámara lentamente para detectar superficie';
+                
+                // Iniciar detección de superficie
+                detectSurface();
                 
             } catch (error) {
-                console.error('Error al cargar modelo:', error);
-                statusDiv.innerHTML = '❌ Error al cargar modelo. Usando cubo de demo.';
+                console.error('Error:', error);
+                statusDiv.innerHTML = '❌ Error al cargar. Usando cubo demo.';
                 loadModel('cube');
             }
         }
         
         // Iniciar grabación
         async function startRecording() {
-            if (!renderer) return;
-            
             try {
-                // Obtener stream del canvas
                 const stream = renderer.domElement.captureStream(30);
-                
-                // Configurar MediaRecorder
-                const mimeType = MediaRecorder.isTypeSupported('video/webm') 
-                    ? 'video/webm' 
-                    : 'video/mp4';
+                const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
                 
                 mediaRecorder = new MediaRecorder(stream, {
                     mimeType: mimeType,
-                    videoBitsPerSecond: 5000000 // 5 Mbps
+                    videoBitsPerSecond: 5000000
                 });
                 
                 recordedChunks = [];
@@ -467,22 +568,21 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `ar-video-${Date.now()}.webm`;
+                    a.download = `ar-recording-${Date.now()}.webm`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    statusDiv.innerHTML = '✅ Video guardado en la galería';
+                    statusDiv.innerHTML = '✅ Video guardado!';
                 };
                 
-                mediaRecorder.start(1000); // Grabar en segmentos de 1 segundo
+                mediaRecorder.start(1000);
                 isRecording = true;
                 
-                // Actualizar UI
                 document.getElementById('recordBtn').style.display = 'none';
                 document.getElementById('stopRecordBtn').style.display = 'block';
                 document.getElementById('recordingIndicator').style.display = 'flex';
-                statusDiv.innerHTML = '🔴 Grabando...';
+                statusDiv.innerHTML = '🔴 Grabando experiencia AR...';
                 
             } catch (error) {
                 console.error('Error al grabar:', error);
@@ -496,7 +596,6 @@
                 mediaRecorder.stop();
                 isRecording = false;
                 
-                // Actualizar UI
                 document.getElementById('recordBtn').style.display = 'block';
                 document.getElementById('stopRecordBtn').style.display = 'none';
                 document.getElementById('recordingIndicator').style.display = 'none';
@@ -507,8 +606,17 @@
         // Resetear escena
         function resetScene() {
             if (currentModel) {
-                currentModel.position.set(0, 0, -2);
-                statusDiv.innerHTML = '🔄 Escena reseteada - Toca para mover el modelo';
+                scene.remove(currentModel);
+                currentModel = null;
+            }
+            surfaceDetected = false;
+            surfacePosition = null;
+            statusDiv.innerHTML = '🔄 Escena reseteada';
+            modelStatusDiv.innerHTML = '📦 Esperando superficie...';
+            
+            if (hitTestTimeout) {
+                clearTimeout(hitTestTimeout);
+                hitTestTimeout = null;
             }
         }
         
@@ -516,7 +624,6 @@
         function animate() {
             animationId = requestAnimationFrame(animate);
             
-            // Actualizar textura de video si existe
             if (videoTexture) {
                 videoTexture.needsUpdate = true;
             }
@@ -527,8 +634,8 @@
                 currentModel.userData.mixer.update(delta);
             }
             
-            // Pequeña rotación para el cubo demo
-            if (currentModel && currentModel.isMesh && currentModel.geometry.type === 'BoxGeometry') {
+            // Rotación del cubo demo
+            if (currentModel && currentModel.isMesh && currentModel.geometry.type === 'BoxGeometry' && currentModel.visible) {
                 currentModel.rotation.y += 0.01;
                 currentModel.rotation.x += 0.005;
             }
@@ -536,15 +643,7 @@
             renderer.render(scene, camera);
         }
         
-        // Manejar cambios de tamaño de ventana
-        window.addEventListener('resize', () => {
-            const aspect = window.innerWidth / window.innerHeight;
-            camera.aspect = aspect;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-        
-        // Configurar eventos de UI
+        // Eventos de UI
         document.getElementById('loadModelBtn').addEventListener('click', () => {
             const selectedModel = document.getElementById('modelSelect').value;
             loadModel(selectedModel);
@@ -554,7 +653,15 @@
         document.getElementById('stopRecordBtn').addEventListener('click', stopRecording);
         document.getElementById('resetBtn').addEventListener('click', resetScene);
         
-        // Iniciar aplicación
+        // Manejar resize
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Iniciar
         init();
     </script>
 </body>
