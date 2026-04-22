@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>WebXR World Tracking - AR Real</title>
+    <title>WebXR World Tracking - CORREGIDO para Android</title>
     <style>
         body {
             margin: 0;
@@ -14,45 +14,53 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            z-index: 100;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
             backdrop-filter: blur(10px);
-            pointer-events: none;
+            color: white;
+            padding: 15px;
+            border-radius: 15px;
+            z-index: 100;
             font-size: 14px;
+            text-align: center;
+            pointer-events: none;
         }
         #controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 20px;
             right: 20px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
             z-index: 100;
             justify-content: center;
         }
         button {
-            padding: 12px 24px;
+            padding: 14px 28px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 30px;
+            border-radius: 40px;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+            flex: 1;
+            max-width: 200px;
         }
         button:hover {
-            transform: scale(1.05);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.5);
+        }
+        button:active {
+            transform: translateY(1px);
         }
         .recording-indicator {
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(255,0,0,0.8);
+            background: rgba(255,0,0,0.9);
             padding: 8px 15px;
             border-radius: 20px;
             color: white;
@@ -60,61 +68,92 @@
             align-items: center;
             gap: 8px;
             z-index: 100;
+            font-weight: bold;
         }
         .recording-dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             background: white;
             border-radius: 50%;
             animation: pulse 1s infinite;
         }
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
         }
         #status {
             position: absolute;
-            bottom: 100px;
+            bottom: 120px;
             left: 20px;
             right: 20px;
             background: rgba(0,0,0,0.8);
             color: #FFD700;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 13px;
+            z-index: 100;
+            pointer-events: none;
+            font-weight: 500;
+        }
+        .instruction {
+            position: absolute;
+            bottom: 200px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: #4CAF50;
             padding: 10px;
             border-radius: 10px;
             text-align: center;
             font-size: 12px;
             z-index: 100;
-            pointer-events: none;
+            animation: fadeInOut 3s infinite;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            button { font-size: 14px; padding: 12px 20px; }
+            #info { font-size: 12px; top: 10px; }
+            #status { font-size: 11px; bottom: 100px; }
         }
     </style>
 </head>
 <body>
     <div id="info">
-        <strong>🔍 WebXR World Tracking</strong><br>
-        Mueve la cámara para detectar superficies
+        <strong>🚀 WebXR World Tracking - Realidad Aumentada</strong><br>
+        Mueve la cámara para detectar superficies (pisos, mesas)
     </div>
     <div id="controls">
-        <button id="enterAR">🎯 Iniciar AR</button>
+        <button id="enterARBtn">🎯 Iniciar AR</button>
         <button id="recordBtn" style="display:none;">🔴 Grabar</button>
         <button id="stopRecordBtn" style="display:none;">⏹️ Detener</button>
     </div>
     <div id="status">📱 Presiona "Iniciar AR" para comenzar</div>
+    <div class="instruction" id="instruction">
+        💡 Asegúrate de tener Chrome actualizado (versión 81+)
+    </div>
     <div class="recording-indicator" id="recordingIndicator">
         <div class="recording-dot"></div>
         <span>Grabando AR...</span>
     </div>
 
+    <!-- IMPORTANTE: Usar la versión correcta de Three.js con soporte WebXR -->
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
             }
         }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
-
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        
         // Variables principales
         let scene, camera, renderer;
         let reticle = null;
@@ -122,15 +161,17 @@
         let xrSession = null;
         let hitTestSource = null;
         let referenceSpace = null;
-        let viewerSpace = null;
+        let modelPlaced = false;
         
         // Elementos UI
-        const enterARBtn = document.getElementById('enterAR');
+        const enterARBtn = document.getElementById('enterARBtn');
         const statusDiv = document.getElementById('status');
+        const instructionDiv = document.getElementById('instruction');
         
-        // Configuración de Three.js
-        function initThree() {
+        // Inicializar Three.js con soporte WebXR
+        async function initThree() {
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111122);
             
             // Luces para el modelo 3D
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -138,163 +179,272 @@
             
             const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
             directionalLight.position.set(5, 10, 7);
+            directionalLight.castShadow = true;
             scene.add(directionalLight);
             
             const backLight = new THREE.PointLight(0xffffff, 0.4);
             backLight.position.set(0, 2, -3);
             scene.add(backLight);
             
-            // Cámara para renderizado normal (no XR)
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // Luz desde abajo para mejor iluminación
+            const fillLight = new THREE.PointLight(0x4466cc, 0.3);
+            fillLight.position.set(0, -1, 0);
+            scene.add(fillLight);
             
-            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+            // Cámara normal (para cuando no está en AR)
+            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.6, 3);
+            
+            // Renderer CON soporte WebXR
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true, 
+                preserveDrawingBuffer: true 
+            });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            
+            // 🔑 IMPORTANTE: Habilitar XR en el renderer - Esta es la sintaxis CORRECTA
+            if (renderer.xr) {
+                console.log('✅ WebXR soportado por el renderer');
+            } else {
+                console.warn('⚠️ WebXR no está disponible en este renderer');
+            }
+            
             document.body.appendChild(renderer.domElement);
             
-            // Crear un retículo para mostrar dónde se va a colocar el objeto
+            // Crear retículo visual para hit testing
             createReticle();
             
-            // Crear modelo de demostración (un cubo colorido)
+            // Crear modelo de demostración (un cubo colorido con animación)
             createDemoModel();
+            
+            // Animación de vista previa cuando no está en AR
+            function animate() {
+                if (!xrSession) {
+                    // Rotar la cámara alrededor del modelo en preview
+                    if (currentModel && !currentModel.visible) {
+                        const time = Date.now() * 0.002;
+                        camera.position.x = Math.sin(time) * 3;
+                        camera.position.z = Math.cos(time) * 3;
+                        camera.lookAt(0, 0, 0);
+                    }
+                    renderer.render(scene, camera);
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
         }
         
-        // Crear retículo visual para hit testing
+        // Crear retículo visual
         function createReticle() {
-            const geometry = new THREE.RingGeometry(0.15, 0.2, 16);
-            const material = new THREE.MeshStandardMaterial({
-                color: 0x00ff00,
-                emissive: 0x00aa00,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.8
-            });
-            reticle = new THREE.Mesh(geometry, material);
-            reticle.rotation.x = -Math.PI / 2;
+            // Anillo exterior
+            const ringGeo = new THREE.TorusGeometry(0.12, 0.02, 32, 64);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00aa44 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            
+            // Anillo interior
+            const innerRingGeo = new THREE.TorusGeometry(0.08, 0.015, 32, 64);
+            const innerRingMat = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00aa44 });
+            const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
+            innerRing.rotation.x = Math.PI / 2;
+            
+            reticle = new THREE.Group();
+            reticle.add(ring);
+            reticle.add(innerRing);
             reticle.visible = false;
             scene.add(reticle);
+            
+            // Partículas alrededor del retículo
+            const particleCount = 8;
+            for (let i = 0; i < particleCount; i++) {
+                const particleGeo = new THREE.SphereGeometry(0.008, 8, 8);
+                const particleMat = new THREE.MeshStandardMaterial({ color: 0x00ff66, emissive: 0x00aa44 });
+                const particle = new THREE.Mesh(particleGeo, particleMat);
+                const angle = (i / particleCount) * Math.PI * 2;
+                particle.position.set(Math.cos(angle) * 0.18, 0, Math.sin(angle) * 0.18);
+                reticle.add(particle);
+            }
         }
         
-        // Crear modelo de demostración (un cubo con materiales bonitos)
+        // Crear modelo de demostración
         function createDemoModel() {
-            const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const group = new THREE.Group();
+            
+            // Cubo central con efecto iridiscente
+            const geometry = new THREE.BoxGeometry(0.18, 0.18, 0.18);
             const materials = [
-                new THREE.MeshStandardMaterial({ color: 0xff3333 }), // derecha
-                new THREE.MeshStandardMaterial({ color: 0x33ff33 }), // izquierda
-                new THREE.MeshStandardMaterial({ color: 0x3333ff }), // arriba
-                new THREE.MeshStandardMaterial({ color: 0xffff33 }), // abajo
-                new THREE.MeshStandardMaterial({ color: 0xff33ff }), // frente
-                new THREE.MeshStandardMaterial({ color: 0x33ffff })  // atrás
+                new THREE.MeshStandardMaterial({ color: 0xff3333, metalness: 0.7, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0x33ff33, metalness: 0.7, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0x3333ff, metalness: 0.7, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0xffff33, metalness: 0.7, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0xff33ff, metalness: 0.7, roughness: 0.3 }),
+                new THREE.MeshStandardMaterial({ color: 0x33ffff, metalness: 0.7, roughness: 0.3 })
             ];
-            currentModel = new THREE.Mesh(geometry, materials);
+            const cube = new THREE.Mesh(geometry, materials);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            group.add(cube);
+            
+            // Esfera de brillo alrededor
+            const sphereGeo = new THREE.SphereGeometry(0.22, 32, 32);
+            const sphereMat = new THREE.MeshStandardMaterial({ 
+                color: 0x44aaff, 
+                transparent: true, 
+                opacity: 0.2,
+                emissive: 0x2266aa,
+                emissiveIntensity: 0.3
+            });
+            const glowSphere = new THREE.Mesh(sphereGeo, sphereMat);
+            group.add(glowSphere);
+            
+            // Partículas flotantes alrededor
+            const particleSystem = new THREE.Group();
+            for (let i = 0; i < 12; i++) {
+                const particleGeo = new THREE.SphereGeometry(0.01, 6, 6);
+                const particleMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0xff4400 });
+                const particle = new THREE.Mesh(particleGeo, particleMat);
+                particle.userData = {
+                    angle: (i / 12) * Math.PI * 2,
+                    radius: 0.3,
+                    speed: 0.5 + Math.random() * 0.5
+                };
+                particleSystem.add(particle);
+            }
+            group.add(particleSystem);
+            group.userData.particleSystem = particleSystem;
+            
+            currentModel = group;
             currentModel.castShadow = true;
             currentModel.receiveShadow = true;
             currentModel.visible = false;
             scene.add(currentModel);
             
-            // Añadir una esfera alrededor para que se vea más interesante
-            const sphereGeo = new THREE.SphereGeometry(0.15, 16, 16);
-            const sphereMat = new THREE.MeshStandardMaterial({ color: 0x44aaff, transparent: true, opacity: 0.3 });
-            const glowSphere = new THREE.Mesh(sphereGeo, sphereMat);
-            currentModel.add(glowSphere);
+            // Animación de partículas
+            function animateParticles() {
+                if (currentModel && currentModel.userData.particleSystem && currentModel.visible) {
+                    const time = Date.now() * 0.003;
+                    currentModel.userData.particleSystem.children.forEach((particle, idx) => {
+                        const angle = particle.userData.angle + time * particle.userData.speed;
+                        particle.position.x = Math.cos(angle) * particle.userData.radius;
+                        particle.position.z = Math.sin(angle) * particle.userData.radius;
+                        particle.position.y = Math.sin(angle * 2) * 0.1;
+                    });
+                }
+                requestAnimationFrame(animateParticles);
+            }
+            animateParticles();
         }
         
         // Función principal para iniciar AR con WebXR
         async function startAR() {
+            // Verificar soporte WebXR
             if (!navigator.xr) {
-                statusDiv.innerHTML = '❌ WebXR no es compatible con este navegador. Usa Chrome en Android o Meta Quest.';
+                statusDiv.innerHTML = '❌ WebXR no es compatible. Asegúrate de tener Chrome 81+ en Android.';
+                instructionDiv.innerHTML = '⚠️ Actualiza Chrome desde Play Store e intenta de nuevo';
                 return;
             }
             
-            statusDiv.innerHTML = '🔍 Solicitando permisos de cámara...';
+            // Verificar si 'immersive-ar' está soportado
+            const isSupported = await navigator.xr.isSessionSupported('immersive-ar');
+            if (!isSupported) {
+                statusDiv.innerHTML = '❌ Tu dispositivo no soporta AR inmersivo. ¿Tienes ARCore instalado?';
+                instructionDiv.innerHTML = '💡 Algunos dispositivos Android necesitan ARCore. Búscalo en Play Store.';
+                return;
+            }
+            
+            statusDiv.innerHTML = '🔍 Solicitando permisos y cámara...';
             
             try {
-                // Solicitar sesión AR con hit-test feature [citation:3]
+                // Solicitar sesión AR con hit-test
                 xrSession = await navigator.xr.requestSession('immersive-ar', {
                     requiredFeatures: ['hit-test'],
                     optionalFeatures: ['local-floor', 'dom-overlay']
                 });
                 
-                // Conectar Three.js a la sesión XR
-                await renderer.xr.enable();
-                renderer.xr.setSession(xrSession);
+                // Configurar el renderer para XR
+                await renderer.xr.setSession(xrSession);
                 
-                // Configurar referencia espacial [citation:3]
+                // Obtener espacios de referencia
                 referenceSpace = await xrSession.requestReferenceSpace('local');
-                viewerSpace = await xrSession.requestReferenceSpace('viewer');
+                const viewerSpace = await xrSession.requestReferenceSpace('viewer');
                 
-                // Crear fuente de hit testing desde el viewer (cámara) [citation:3]
+                // Crear fuente de hit testing
                 hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
                 
                 // Configurar eventos de la sesión
-                setupSessionEvents();
+                xrSession.addEventListener('end', onSessionEnd);
                 
-                // Iniciar renderizado XR
+                // Configurar evento de selección (toque) para colocar objetos
+                xrSession.addEventListener('select', onSelect);
+                
+                // Iniciar el loop de renderizado XR
                 renderer.setAnimationLoop(renderXRFrame);
                 
-                // Cambiar UI
+                // Actualizar UI
                 enterARBtn.style.display = 'none';
                 document.getElementById('recordBtn').style.display = 'block';
-                statusDiv.innerHTML = '✅ AR activo! Mueve la cámara para detectar superficies. Toca para colocar el objeto.';
-                
-                // Configurar evento de toque para colocar objetos [citation:3]
-                setupTapEvents();
+                statusDiv.innerHTML = '✅ AR activo! Mueve la cámara para detectar superficies.';
+                instructionDiv.innerHTML = '🎯 Toca la pantalla cuando veas el retículo verde para colocar el objeto.';
                 
             } catch (error) {
                 console.error('Error al iniciar AR:', error);
-                statusDiv.innerHTML = `❌ Error: ${error.message}. Asegúrate de usar Chrome en Android.`;
+                statusDiv.innerHTML = `❌ Error: ${error.message}. Asegúrate de tener Chrome actualizado.`;
+                instructionDiv.innerHTML = '💡 Consejo: Reinicia Chrome y asegura que la cámara tenga permisos.';
             }
         }
         
-        // Configurar eventos de la sesión XR
-        function setupSessionEvents() {
-            xrSession.addEventListener('end', () => {
-                renderer.setAnimationLoop(null);
-                enterARBtn.style.display = 'block';
-                document.getElementById('recordBtn').style.display = 'none';
-                statusDiv.innerHTML = '📱 Sesión AR finalizada. Presiona "Iniciar AR" para volver.';
+        // Evento cuando termina la sesión
+        function onSessionEnd(event) {
+            renderer.setAnimationLoop(null);
+            xrSession = null;
+            hitTestSource = null;
+            enterARBtn.style.display = 'block';
+            document.getElementById('recordBtn').style.display = 'none';
+            statusDiv.innerHTML = '📱 Sesión AR finalizada. Presiona "Iniciar AR" para volver.';
+            instructionDiv.innerHTML = '💡 Presiona "Iniciar AR" para comenzar de nuevo.';
+            if (currentModel) {
                 currentModel.visible = false;
-                reticle.visible = false;
-            });
+            }
+            modelPlaced = false;
         }
         
-        // Configurar evento de toque para colocar objetos [citation:3]
-        function setupTapEvents() {
-            xrSession.addEventListener('select', (event) => {
-                if (reticle.visible && currentModel) {
-                    // Clonar o mover el modelo a la posición del retículo
-                    currentModel.position.copy(reticle.position);
-                    currentModel.visible = true;
-                    statusDiv.innerHTML = '✅ Objeto colocado! Camina alrededor para verlo desde diferentes ángulos.';
-                    
-                    // Pequeña animación de escala al colocar
-                    currentModel.scale.set(0, 0, 0);
-                    setTimeout(() => {
-                        let scale = 0;
-                        const animateScale = () => {
-                            scale += 0.05;
-                            if (scale < 1) {
-                                currentModel.scale.set(scale, scale, scale);
-                                requestAnimationFrame(animateScale);
-                            } else {
-                                currentModel.scale.set(1, 1, 1);
-                            }
-                        };
-                        animateScale();
-                    }, 50);
+        // Evento de selección (tocar pantalla)
+        function onSelect(event) {
+            if (reticle.visible && currentModel && !modelPlaced) {
+                // Posicionar el modelo en la posición del retículo
+                currentModel.position.copy(reticle.position);
+                currentModel.visible = true;
+                modelPlaced = true;
+                statusDiv.innerHTML = '✅ Objeto colocado! Camina alrededor para verlo desde diferentes ángulos.';
+                instructionDiv.innerHTML = '🎉 Excelente! El objeto permanecerá fijo en esa posición.';
+                
+                // Animación de aparición
+                currentModel.scale.set(0, 0, 0);
+                let scale = 0;
+                function animateScale() {
+                    scale += 0.05;
+                    if (scale < 1) {
+                        currentModel.scale.set(scale, scale, scale);
+                        requestAnimationFrame(animateScale);
+                    } else {
+                        currentModel.scale.set(1, 1, 1);
+                    }
                 }
-            });
+                animateScale();
+            }
         }
         
-        // Frame de renderizado XR - Aquí ocurre el HIT TESTING real [citation:3]
+        // Frame de renderizado XR - Aquí ocurre el HIT TESTING real
         function renderXRFrame(time, frame) {
-            if (!frame || !hitTestSource) return;
+            if (!frame || !hitTestSource || !referenceSpace) return;
             
-            // Obtener resultados del hit test [citation:1][citation:3]
+            // Obtener resultados del hit test
             const hitTestResults = frame.getHitTestResults(hitTestSource);
             
-            if (hitTestResults.length > 0 && referenceSpace) {
-                // Tomar el primer resultado de hit test (la superficie más cercana)
+            if (hitTestResults.length > 0) {
+                // Hay superficie detectada
                 const hit = hitTestResults[0];
                 const hitPose = hit.getPose(referenceSpace);
                 
@@ -303,30 +453,35 @@
                     reticle.visible = true;
                     reticle.position.set(
                         hitPose.transform.position.x,
-                        hitPose.transform.position.y + 0.01, // Ligeramente elevado para que se vea
+                        hitPose.transform.position.y + 0.05,
                         hitPose.transform.position.z
                     );
                     
-                    // Rotar el retículo para que mire hacia la cámara
-                    reticle.lookAt(camera.position);
+                    // Hacer que el retículo mire hacia la cámara
+                    if (xrSession) {
+                        const cameraPose = frame.getViewerPose(referenceSpace);
+                        if (cameraPose) {
+                            reticle.lookAt(cameraPose.transform.position);
+                        }
+                    }
                     
-                    // Actualizar estado
-                    statusDiv.innerHTML = '🎯 Superficie detectada! Toca para colocar el objeto.';
+                    // Animación de pulsación del retículo
+                    const scale = 1 + Math.sin(Date.now() * 0.015) * 0.2;
+                    reticle.scale.set(scale, scale, scale);
+                    
+                    if (!modelPlaced) {
+                        statusDiv.innerHTML = '🎯 Superficie detectada! Toca la pantalla para colocar el objeto.';
+                    }
                 }
             } else {
-                // No hay superficie detectada
                 reticle.visible = false;
-                statusDiv.innerHTML = '🔍 Mueve la cámara lentamente para detectar una superficie (piso o mesa)...';
-            }
-            
-            // Mantener el modelo visible si ya fue colocado (no lo movemos)
-            if (currentModel.visible && currentModel.position) {
-                // El modelo permanece fijo en el mundo real gracias a WebXR
-                // No necesitamos actualizar su posición
+                if (!modelPlaced) {
+                    statusDiv.innerHTML = '🔍 Mueve la cámara lentamente para detectar una superficie (piso o mesa)...';
+                }
             }
         }
         
-        // Función para grabar (simplificada)
+        // Función de grabación (opcional)
         let mediaRecorder = null;
         let recordedChunks = [];
         let isRecording = false;
@@ -348,12 +503,12 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `ar-recording-${Date.now()}.webm`;
+                    a.download = `ar-world-tracking-${Date.now()}.webm`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    statusDiv.innerHTML = '✅ Video guardado!';
+                    statusDiv.innerHTML = '✅ Video guardado en descargas!';
                 };
                 
                 mediaRecorder.start(1000);
@@ -361,7 +516,7 @@
                 document.getElementById('recordBtn').style.display = 'none';
                 document.getElementById('stopRecordBtn').style.display = 'block';
                 document.getElementById('recordingIndicator').style.display = 'flex';
-                statusDiv.innerHTML = '🔴 Grabando...';
+                statusDiv.innerHTML = '🔴 Grabando experiencia AR...';
             } catch (error) {
                 console.error('Error al grabar:', error);
             }
@@ -382,21 +537,8 @@
         document.getElementById('recordBtn').addEventListener('click', startRecording);
         document.getElementById('stopRecordBtn').addEventListener('click', stopRecording);
         
-        // Inicializar
+        // Inicializar la escena
         initThree();
-        
-        // Animación normal (cuando no está en AR)
-        function animate() {
-            if (!renderer.xr.isPresenting) {
-                // Rotación suave para vista previa
-                if (currentModel && currentModel.visible === false) {
-                    // Solo para vista previa
-                }
-                renderer.render(scene, camera);
-            }
-            requestAnimationFrame(animate);
-        }
-        animate();
         
         // Manejar resize
         window.addEventListener('resize', () => {
@@ -405,7 +547,22 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
         
-        console.log('Aplicación iniciada. WebXR disponible:', !!navigator.xr);
+        // Verificar compatibilidad al cargar
+        console.log('🔍 Verificando compatibilidad WebXR...');
+        console.log('navigator.xr disponible:', !!navigator.xr);
+        if (navigator.xr) {
+            navigator.xr.isSessionSupported('immersive-ar').then(supported => {
+                console.log('immersive-ar soportado:', supported);
+                if (supported) {
+                    statusDiv.innerHTML = '✅ WebXR disponible! Presiona "Iniciar AR" para comenzar.';
+                    instructionDiv.innerHTML = '🎯 Presiona el botón verde para iniciar la experiencia AR';
+                } else {
+                    statusDiv.innerHTML = '⚠️ AR inmersivo no soportado. ¿Tienes ARCore instalado?';
+                }
+            });
+        } else {
+            statusDiv.innerHTML = '⚠️ WebXR no disponible. Actualiza Chrome (versión 81+) desde Play Store.';
+        }
     </script>
 </body>
 </html>
