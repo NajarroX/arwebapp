@@ -3,508 +3,729 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>WebXR Debug - World Tracking Funcional</title>
+    <title>AR Brutalist - Realidad Aumentada con AR.js</title>
+    
+    <!-- Google Fonts para tipografías modernas -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- A-Frame y AR.js -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-ar.js@3.0.2/aframe-ar.min.js"></script>
+    
+    <!-- Componente de grabación de pantalla -->
+    <script src="https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js"></script>
+    
     <style>
-        body {
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #0a0a0a;
             overflow: hidden;
-            font-family: monospace;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
-        #debug-panel {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            color: #0f0;
-            padding: 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            z-index: 200;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
-            pointer-events: none;
-        }
-        #info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px;
-            border-radius: 10px;
-            z-index: 100;
-            font-size: 12px;
-            text-align: center;
-            pointer-events: none;
-        }
-        #controls {
-            position: absolute;
-            bottom: 220px;
-            left: 10px;
-            right: 10px;
+        
+        /* Pantalla de inicio brutalista */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            z-index: 1000;
             display: flex;
-            gap: 10px;
-            z-index: 100;
+            flex-direction: column;
             justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
         }
-        button {
-            padding: 12px 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            flex: 1;
+        
+        .brutalist-container {
+            max-width: 500px;
+            width: 90%;
+            padding: 40px 30px;
+            background: #111;
+            border: 3px solid #2ecc2e;
+            box-shadow: 12px 12px 0 rgba(46, 204, 46, 0.3);
         }
-        button.danger {
-            background: #f44336;
+        
+        .brutalist-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            letter-spacing: -2px;
+            color: #fff;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2ecc2e;
+            display: inline-block;
         }
-        .reticle {
+        
+        .brutalist-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .instruction-card {
+            background: #1a1a1a;
+            border-left: 4px solid #2ecc2e;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .instruction-card h3 {
+            color: #2ecc2e;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+        
+        .instruction-card ul {
+            list-style: none;
+        }
+        
+        .instruction-card li {
+            color: #ccc;
+            font-size: 0.9rem;
+            margin: 12px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .instruction-card li::before {
+            content: "▸";
+            color: #2ecc2e;
             position: absolute;
-            width: 50px;
-            height: 50px;
-            border: 2px solid #0f0;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
+            left: 0;
+        }
+        
+        .btn-brutalist {
+            background: transparent;
+            border: 2px solid #2ecc2e;
+            color: #2ecc2e;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Grotesk', sans-serif;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .btn-brutalist:hover {
+            background: #2ecc2e;
+            color: #0a0a0a;
+            box-shadow: 6px 6px 0 rgba(46, 204, 46, 0.3);
+            transform: translate(-3px, -3px);
+        }
+        
+        /* Panel de control brutalista */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(10, 10, 10, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2ecc2e;
+            padding: 15px 20px;
             z-index: 200;
             display: none;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
         }
-        .reticle::before {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background: #0f0;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        
+        .tracking-selector {
+            display: flex;
+            gap: 8px;
+            background: #1a1a1a;
+            padding: 5px;
+            border: 1px solid #333;
         }
-        .reticle::after {
-            content: '';
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            border: 1px solid rgba(0,255,0,0.5);
+        
+        .tracking-btn {
+            background: transparent;
+            border: none;
+            color: #888;
+            padding: 10px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+        
+        .tracking-btn.active {
+            background: #2ecc2e;
+            color: #0a0a0a;
+        }
+        
+        .marker-select {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 10px 15px;
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .marker-select option {
+            background: #1a1a1a;
+        }
+        
+        .record-btn {
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            background: #ff0000;
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+        }
+        
+        .record-btn.recording {
+            animation: pulse 1s infinite;
+            background: #cc0000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .stop-btn {
+            width: 50px;
+            height: 50px;
+            background: #333;
+            border: 3px solid #fff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stop-btn::after {
+            content: "■";
+            color: #fff;
+            font-size: 24px;
+        }
+        
+        .reset-btn {
+            background: #1a1a1a;
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 10px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        
+        .status-bar {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(10, 10, 10, 0.9);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #2ecc2e;
+            padding: 12px 20px;
+            z-index: 200;
+            display: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #2ecc2e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .model-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 5px 12px;
+        }
+        
+        .model-controls label {
+            color: #888;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .model-controls input {
+            width: 100px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            color: #2ecc2e;
+            padding: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .control-panel {
+                flex-direction: column;
+                bottom: 10px;
+                left: 10px;
+                right: 10px;
+            }
+            
+            .brutalist-title {
+                font-size: 2.2rem;
+            }
+            
+            .tracking-selector {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .marker-select {
+                width: 100%;
+            }
+            
+            .reset-btn {
+                width: 100%;
+            }
+        }
+        
+        /* Ocultar el mensaje de orientación de A-Frame */
+        .a-loader-title {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="info">
-        <strong>🔧 WebXR Debug - World Tracking</strong><br>
-        <span id="statusMsg">Inicializando...</span>
+    <!-- Pantalla de inicio -->
+    <div class="start-screen" id="startScreen">
+        <div class="brutalist-container">
+            <div class="brutalist-title">AR<br>BRUTALIST</div>
+            <div class="brutalist-subtitle">AUGMENTED REALITY EXPERIENCE</div>
+            
+            <div class="instruction-card">
+                <h3>▸ INSTRUCCIONES</h3>
+                <ul>
+                    <li>Permite el acceso a la cámara</li>
+                    <li>Para IMAGE TRACKING: enfoca el marcador impreso</li>
+                    <li>Para WORLD TRACKING: toca donde colocar el modelo</li>
+                    <li>Usa el botón rojo para grabar tu experiencia</li>
+                    <li>Ajusta escala y posición en tiempo real</li>
+                </ul>
+            </div>
+            
+            <button class="btn-brutalist" id="startBtn">INICIAR ▸</button>
+        </div>
     </div>
-    <div id="controls">
-        <button id="startAR">🎯 Iniciar AR</button>
-        <button id="placeObject" style="display:none;">📍 Colocar Objeto</button>
-        <button id="resetAR" class="danger" style="display:none;">🔄 Resetear</button>
+    
+    <!-- Barra de estado -->
+    <div class="status-bar" id="statusBar">
+        <span id="statusText">● SISTEMA LISTO</span>
     </div>
-    <div id="debug-panel">
-        <strong>📋 Debug Log:</strong><br>
-        <div id="debugLog"></div>
+    
+    <!-- Panel de control -->
+    <div class="control-panel" id="controlPanel">
+        <div class="tracking-selector">
+            <button class="tracking-btn active" data-tracking="image">IMAGE</button>
+            <button class="tracking-btn" data-tracking="world">WORLD</button>
+        </div>
+        
+        <select class="marker-select" id="markerSelect">
+            <option value="hiro">HIRO (DEFAULT)</option>
+            <option value="kanji">KANJI</option>
+            <option value="custom">CUSTOM MARKER</option>
+        </select>
+        
+        <div class="model-controls">
+            <label>ESCALA</label>
+            <input type="range" id="scaleSlider" min="0.1" max="3" step="0.05" value="0.8">
+            <span id="scaleValue" style="color:#2ecc2e;width:35px;">0.8</span>
+        </div>
+        
+        <div class="record-btn" id="recordBtn"></div>
+        <div class="stop-btn" id="stopBtn"></div>
+        
+        <button class="reset-btn" id="resetBtn">RESET</button>
     </div>
-    <div class="reticle" id="reticle"></div>
-
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+    
+    <!-- Escena A-Frame con AR.js -->
+    <a-scene 
+        id="arScene"
+        embedded 
+        arjs='sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'
+        renderer='logarithmicDepthBuffer: true'
+        vr-mode-ui='enabled: false'
+        device-orientation-permission-ui='enabled: false'
+    >
+        <!-- Cámara para WORLD TRACKING (se activa/desactiva dinámicamente) -->
+        <a-entity id="worldCamera" camera position="0 1.6 0" look-controls></a-entity>
+        
+        <!-- Marcador HIRO (Image Tracking) -->
+        <a-marker id="hiroMarker" preset="hiro" smooth="true" smoothCount="5" smoothTolerance="0.01" threshold="25">
+            <a-entity id="hiroModel" gltf-model="https://cdn.glitch.com/0cb47f7b-2f7c-4d6e-8a3f-8b9e2a1f4c5d/tree.gltf?v=123" scale="0.8 0.8 0.8" position="0 0 0"></a-entity>
+        </a-marker>
+        
+        <!-- Marcador KANJI (Image Tracking) -->
+        <a-marker id="kanjiMarker" preset="kanji" smooth="true" smoothCount="5" smoothTolerance="0.01" threshold="25">
+            <a-entity id="kanjiModel">
+                <a-box color="#ff3366" depth="0.5" height="0.5" width="0.5" material="roughness:0.2; metalness:0.8"></a-box>
+                <a-text value="KANJI" color="white" align="center" position="0 0.4 0" scale="0.5 0.5 0.5"></a-text>
+            </a-entity>
+        </a-marker>
+        
+        <!-- Marcador personalizado (requiere archivo .patt) -->
+        <a-marker id="customMarker" type="pattern" url="markers/custom-marker.patt" smooth="true">
+            <a-entity id="customModel">
+                <a-sphere color="#2ecc2e" radius="0.3" position="0 0.3 0"></a-sphere>
+                <a-torus color="#ffffff" radius="0.4" radius-tubular="0.05" position="0 0.3 0"></a-torus>
+            </a-entity>
+        </a-marker>
+        
+        <!-- Entidad para WORLD TRACKING (se posiciona dinámicamente) -->
+        <a-entity id="worldModel" visible="false">
+            <a-box color="#2ecc2e" depth="0.4" height="0.4" width="0.4" material="roughness:0.3; metalness:0.7"></a-box>
+            <a-sphere color="#ffffff" radius="0.25" position="0 0.4 0" opacity="0.5"></a-sphere>
+            <a-torus color="#2ecc2e" radius="0.35" radius-tubular="0.03" rotation="90 0 0" position="0 0.2 0"></a-torus>
+        </a-entity>
+        
+        <!-- Luz ambiental y direccional -->
+        <a-light type="ambient" intensity="0.6"></a-light>
+        <a-light type="directional" intensity="0.8" position="5 10 7"></a-light>
+        <a-light type="point" intensity="0.5" position="0 2 -3"></a-light>
+    </a-scene>
+    
+    <script>
+        // ============================================
+        // CONFIGURACIÓN PRINCIPAL
+        // ============================================
+        
+        // Elementos DOM
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const controlPanel = document.getElementById('controlPanel');
+        const statusBar = document.getElementById('statusBar');
+        const statusText = document.getElementById('statusText');
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const scaleSlider = document.getElementById('scaleSlider');
+        const scaleValue = document.getElementById('scaleValue');
+        const markerSelect = document.getElementById('markerSelect');
+        
+        // Elementos de la escena AR
+        const hiroMarker = document.getElementById('hiroMarker');
+        const kanjiMarker = document.getElementById('kanjiMarker');
+        const customMarker = document.getElementById('customMarker');
+        const worldModel = document.getElementById('worldModel');
+        const worldCamera = document.getElementById('worldCamera');
+        const hiroModel = document.getElementById('hiroModel');
+        
+        // Variables de estado
+        let currentTracking = 'image'; // 'image' o 'world'
+        let isRecording = false;
+        let recordRTC = null;
+        let stream = null;
+        let worldPlaced = false;
+        
+        // ============================================
+        // FUNCIONES DE INICIALIZACIÓN
+        // ============================================
+        
+        // Iniciar la aplicación
+        function initApp() {
+            // Ocultar pantalla de inicio
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                controlPanel.style.display = 'flex';
+                statusBar.style.display = 'block';
+            }, 500);
+            
+            // Configurar tracking inicial
+            setTrackingMode('image');
+            
+            // Configurar listeners
+            setupEventListeners();
+            
+            // Inicializar cámara (AR.js lo maneja automáticamente)
+            statusText.innerHTML = '● CÁMARA ACTIVA | MODO: IMAGE TRACKING';
+            
+            // Verificar si es iOS para mostrar advertencia
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS) {
+                statusText.innerHTML = '⚠️ iOS DETECTADO | PERMITE CÁMARA MANUALMENTE';
             }
         }
-    </script>
-
-    <script type="module">
-        import * as THREE from 'three';
         
-        // === CONFIGURACIÓN ===
-        let scene, camera, renderer;
-        let xrSession = null;
-        let referenceSpace = null;
-        let hitTestSource = null;
-        let currentObject = null;
-        let objectPlaced = false;
-        
-        // Elementos UI
-        const debugDiv = document.getElementById('debugLog');
-        const statusSpan = document.getElementById('statusMsg');
-        const reticleDiv = document.getElementById('reticle');
-        
-        // Función para agregar logs al panel de depuración
-        function addLog(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const colors = { info: '#0f0', error: '#f00', warning: '#ff0', success: '#0ff' };
-            const logEntry = document.createElement('div');
-            logEntry.style.color = colors[type] || colors.info;
-            logEntry.style.margin = '2px 0';
-            logEntry.style.fontSize = '10px';
-            logEntry.innerHTML = `[${timestamp}] ${message}`;
-            debugDiv.appendChild(logEntry);
-            debugDiv.scrollTop = debugDiv.scrollHeight;
-            console.log(`[${timestamp}] ${message}`);
+        // Configurar modo de tracking
+        function setTrackingMode(mode) {
+            currentTracking = mode;
+            
+            if (mode === 'image') {
+                // Activar markers, desactivar world tracking
+                hiroMarker.setAttribute('visible', 'true');
+                kanjiMarker.setAttribute('visible', 'true');
+                customMarker.setAttribute('visible', 'true');
+                worldModel.setAttribute('visible', 'false');
+                worldModel.setAttribute('position', '0 0 0');
+                worldPlaced = false;
+                
+                // Seleccionar marker según dropdown
+                const selectedMarker = markerSelect.value;
+                showSelectedMarker(selectedMarker);
+                
+                statusText.innerHTML = '● MODO: IMAGE TRACKING | ENFOQUE EL MARCADOR';
+            } else {
+                // Modo world tracking: desactivar markers
+                hiroMarker.setAttribute('visible', 'false');
+                kanjiMarker.setAttribute('visible', 'false');
+                customMarker.setAttribute('visible', 'false');
+                
+                // Mostrar modelo world para colocar
+                worldModel.setAttribute('visible', 'true');
+                
+                statusText.innerHTML = '● MODO: WORLD TRACKING | TOCA LA PANTALLA PARA COLOCAR';
+            }
         }
         
-        function updateStatus(message) {
-            statusSpan.innerHTML = message;
-            addLog(message, 'info');
+        // Mostrar el marker seleccionado (ocultar los otros)
+        function showSelectedMarker(markerType) {
+            if (markerType === 'hiro') {
+                hiroMarker.setAttribute('visible', 'true');
+                kanjiMarker.setAttribute('visible', 'false');
+                customMarker.setAttribute('visible', 'false');
+                statusText.innerHTML = '● MARCADOR: HIRO | ENFOQUE EL PATRÓN';
+            } else if (markerType === 'kanji') {
+                hiroMarker.setAttribute('visible', 'false');
+                kanjiMarker.setAttribute('visible', 'true');
+                customMarker.setAttribute('visible', 'false');
+                statusText.innerHTML = '● MARCADOR: KANJI | ENFOQUE EL PATRÓN';
+            } else if (markerType === 'custom') {
+                hiroMarker.setAttribute('visible', 'false');
+                kanjiMarker.setAttribute('visible', 'false');
+                customMarker.setAttribute('visible', 'true');
+                statusText.innerHTML = '● MARCADOR: CUSTOM | USA TU PROPIO PATRÓN';
+            }
         }
         
-        // === INICIALIZAR THREE.JS ===
-        async function initThree() {
-            addLog('Inicializando Three.js...', 'info');
-            
-            // Escena
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x111122);
-            
-            // Luces
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(5, 10, 7);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-            
-            const backLight = new THREE.PointLight(0x4466cc, 0.4);
-            backLight.position.set(0, 2, -3);
-            scene.add(backLight);
-            
-            // Cámara normal (preview)
-            camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 1.6, 2);
-            
-            // Renderer con soporte WebXR
-            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true;
-            document.body.appendChild(renderer.domElement);
-            
-            addLog('Three.js inicializado correctamente', 'success');
-            
-            // Crear un objeto de prueba visible (un cubo flotante para debug)
-            createDebugObject();
-            
-            // Animación de preview
-            function animatePreview() {
-                if (!xrSession) {
-                    // Rotar la cámara alrededor del objeto de debug
-                    if (currentObject && !objectPlaced) {
-                        const time = Date.now() * 0.002;
-                        camera.position.x = Math.sin(time) * 2;
-                        camera.position.z = Math.cos(time) * 2;
-                        camera.lookAt(0, 0.5, 0);
-                    }
-                    renderer.render(scene, camera);
+        // Colocar modelo en world tracking (AR.js no tiene hit-test nativo,
+        // usamos una aproximación con la orientación de la cámara)
+        function placeWorldModel() {
+            if (!worldPlaced && currentTracking === 'world') {
+                // Obtener la posición de la cámara en el espacio 3D
+                const cameraEl = document.querySelector('a-camera');
+                if (cameraEl && cameraEl.object3D) {
+                    // Obtener dirección hacia adelante
+                    const forward = new THREE.Vector3(0, 0, -1);
+                    forward.applyQuaternion(cameraEl.object3D.quaternion);
+                    
+                    // Posicionar a 1.5 metros frente a la cámara
+                    const posX = cameraEl.object3D.position.x + forward.x * 1.5;
+                    const posZ = cameraEl.object3D.position.z + forward.z * 1.5;
+                    const posY = 0; // Nivel del suelo
+                    
+                    worldModel.setAttribute('position', `${posX} ${posY} ${posZ}`);
+                    worldPlaced = true;
+                    
+                    statusText.innerHTML = '● MODELO COLOCADO | PUEDES MOVERTE ALREDEDOR';
+                    
+                    // Animación sutil de aparición
+                    worldModel.setAttribute('animation', 'property: scale; from: 0 0 0; to: 0.8 0.8 0.8; dur: 300; easing: ease-out');
+                    setTimeout(() => {
+                        worldModel.removeAttribute('animation');
+                    }, 350);
                 }
-                requestAnimationFrame(animatePreview);
-            }
-            animatePreview();
-        }
-        
-        // Crear objeto de debug visible (un cubo colorido)
-        function createDebugObject() {
-            // Crear un grupo
-            const group = new THREE.Group();
-            
-            // Cubo principal
-            const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-            const material = new THREE.MeshStandardMaterial({ 
-                color: 0xff6600,
-                metalness: 0.7,
-                roughness: 0.3,
-                emissive: 0x442200
-            });
-            const cube = new THREE.Mesh(geometry, material);
-            cube.castShadow = true;
-            group.add(cube);
-            
-            // Esfera brillante alrededor
-            const sphereGeo = new THREE.SphereGeometry(0.25, 32, 32);
-            const sphereMat = new THREE.MeshStandardMaterial({ 
-                color: 0x44aaff, 
-                transparent: true, 
-                opacity: 0.3,
-                emissive: 0x2266aa
-            });
-            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            group.add(sphere);
-            
-            // Puntos alrededor
-            const points = [];
-            for (let i = 0; i < 8; i++) {
-                const pointGeo = new THREE.SphereGeometry(0.02, 8, 8);
-                const pointMat = new THREE.MeshStandardMaterial({ color: 0xffaa44 });
-                const point = new THREE.Mesh(pointGeo, pointMat);
-                group.add(point);
-                points.push(point);
-            }
-            
-            group.userData.points = points;
-            group.userData.time = 0;
-            
-            currentObject = group;
-            currentObject.visible = false;
-            scene.add(currentObject);
-            
-            addLog('Objeto de debug creado (cubo naranja con esfera azul)', 'success');
-            
-            // Animación de los puntos
-            function animatePoints() {
-                if (currentObject && currentObject.visible) {
-                    const time = Date.now() * 0.003;
-                    const radius = 0.35;
-                    currentObject.userData.points.forEach((point, i) => {
-                        const angle = (i / 8) * Math.PI * 2 + time;
-                        point.position.x = Math.cos(angle) * radius;
-                        point.position.z = Math.sin(angle) * radius;
-                        point.position.y = Math.sin(angle * 2) * 0.1;
-                    });
-                    
-                    // Rotación suave del cubo
-                    if (currentObject.children[0]) {
-                        currentObject.children[0].rotation.y = time;
-                        currentObject.children[0].rotation.x = time * 0.5;
-                    }
-                }
-                requestAnimationFrame(animatePoints);
-            }
-            animatePoints();
-        }
-        
-        // === INICIAR AR CON WEBXR ===
-        async function startAR() {
-            addLog('Verificando compatibilidad WebXR...', 'info');
-            
-            if (!navigator.xr) {
-                updateStatus('❌ WebXR no disponible');
-                addLog('ERROR: navigator.xr no existe', 'error');
-                return;
-            }
-            
-            // Verificar soporte de AR inmersivo
-            const supported = await navigator.xr.isSessionSupported('immersive-ar');
-            addLog(`immersive-ar soportado: ${supported}`, supported ? 'success' : 'error');
-            
-            if (!supported) {
-                updateStatus('❌ Tu dispositivo no soporta AR inmersivo');
-                addLog('Necesitas Chrome 81+ y ARCore instalado', 'warning');
-                return;
-            }
-            
-            updateStatus('🔍 Solicitando permisos de cámara...');
-            
-            try {
-                // Crear sesión AR
-                xrSession = await navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'],
-                    optionalFeatures: ['local-floor']
-                });
-                
-                addLog('Sesión AR creada exitosamente', 'success');
-                
-                // Configurar renderer
-                await renderer.xr.setSession(xrSession);
-                addLog('Renderer configurado para XR', 'success');
-                
-                // Espacios de referencia
-                referenceSpace = await xrSession.requestReferenceSpace('local');
-                const viewerSpace = await xrSession.requestReferenceSpace('viewer');
-                addLog('Espacios de referencia creados', 'success');
-                
-                // Fuente de hit testing
-                hitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
-                addLog('Fuente de hit testing creada', 'success');
-                
-                // Eventos de la sesión
-                xrSession.addEventListener('end', onSessionEnd);
-                xrSession.addEventListener('select', onSelect);
-                
-                // Iniciar loop de renderizado XR
-                renderer.setAnimationLoop(renderXRFrame);
-                
-                // Actualizar UI
-                document.getElementById('startAR').style.display = 'none';
-                document.getElementById('placeObject').style.display = 'block';
-                document.getElementById('resetAR').style.display = 'block';
-                
-                updateStatus('✅ AR activo! Mueve la cámara para detectar superficies');
-                addLog('AR funcionando correctamente - Mueve el dispositivo', 'success');
-                
-                // Mostrar retículo visual
-                reticleDiv.style.display = 'block';
-                
-            } catch (error) {
-                addLog(`ERROR al iniciar AR: ${error.message}`, 'error');
-                updateStatus(`❌ Error: ${error.message}`);
+            } else if (worldPlaced) {
+                statusText.innerHTML = '● MODELO YA COLOCADO | USA RESET PARA REUBICAR';
             }
         }
         
-        // Evento cuando termina la sesión
-        function onSessionEnd(event) {
-            addLog('Sesión AR finalizada', 'warning');
-            renderer.setAnimationLoop(null);
-            xrSession = null;
-            hitTestSource = null;
-            
-            document.getElementById('startAR').style.display = 'block';
-            document.getElementById('placeObject').style.display = 'none';
-            document.getElementById('resetAR').style.display = 'none';
-            reticleDiv.style.display = 'none';
-            
-            updateStatus('Sesión AR finalizada');
+        // Resetear posición en world tracking
+        function resetWorldModel() {
+            if (currentTracking === 'world') {
+                worldPlaced = false;
+                worldModel.setAttribute('visible', 'true');
+                statusText.innerHTML = '● POSICIÓN RESETEADA | TOCA PARA COLOCAR NUEVAMENTE';
+            }
         }
         
-        // Evento de selección (toque en pantalla)
-        function onSelect(event) {
-            addLog('📱 Toque detectado en pantalla', 'info');
+        // Actualizar escala del modelo activo
+        function updateModelScale(value) {
+            const scale = parseFloat(value);
+            scaleValue.textContent = scale.toFixed(2);
             
-            if (currentObject && !objectPlaced) {
-                // Encontrar la posición del retículo en el mundo AR
-                if (window.lastHitPose) {
-                    // Posicionar el objeto en el punto del hit test
-                    currentObject.position.copy(window.lastHitPose);
-                    currentObject.visible = true;
-                    objectPlaced = true;
-                    
-                    addLog(`✅ Objeto colocado en posición: x=${window.lastHitPose.x.toFixed(2)}, y=${window.lastHitPose.y.toFixed(2)}, z=${window.lastHitPose.z.toFixed(2)}`, 'success');
-                    updateStatus('✅ Objeto colocado! Camina alrededor para verlo');
-                    
-                    // Animación de aparición
-                    currentObject.scale.set(0, 0, 0);
-                    let scale = 0;
-                    function animateScale() {
-                        scale += 0.05;
-                        if (scale < 1) {
-                            currentObject.scale.set(scale, scale, scale);
-                            requestAnimationFrame(animateScale);
-                        }
-                    }
-                    animateScale();
-                    
-                    document.getElementById('placeObject').style.display = 'none';
+            if (currentTracking === 'image') {
+                const selectedMarker = markerSelect.value;
+                if (selectedMarker === 'hiro') {
+                    hiroModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
+                } else if (selectedMarker === 'kanji') {
+                    document.getElementById('kanjiModel').setAttribute('scale', `${scale} ${scale} ${scale}`);
                 } else {
-                    addLog('No hay superficie detectada para colocar el objeto', 'warning');
-                }
-            } else if (objectPlaced) {
-                addLog('El objeto ya está colocado. Usa Resetear para volver a colocar.', 'info');
-            }
-        }
-        
-        // Frame de renderizado XR - Hit testing
-        let lastHitTime = 0;
-        
-        function renderXRFrame(time, frame) {
-            if (!frame || !hitTestSource || !referenceSpace) return;
-            
-            // Obtener resultados del hit test
-            const hitTestResults = frame.getHitTestResults(hitTestSource);
-            
-            if (hitTestResults.length > 0) {
-                // Hay superficie detectada
-                const hit = hitTestResults[0];
-                const hitPose = hit.getPose(referenceSpace);
-                
-                if (hitPose) {
-                    // Guardar la posición para cuando se toque
-                    window.lastHitPose = hitPose.transform.position;
-                    
-                    // Actualizar retículo visual en CSS
-                    // Convertir coordenadas del mundo a pantalla
-                    const cameraPose = frame.getViewerPose(referenceSpace);
-                    if (cameraPose) {
-                        // Mostrar retículo verde
-                        reticleDiv.style.borderColor = '#0f0';
-                        reticleDiv.style.boxShadow = '0 0 10px rgba(0,255,0,0.5)';
-                        
-                        if (!objectPlaced && Date.now() - lastHitTime > 1000) {
-                            lastHitTime = Date.now();
-                            addLog(`Superficie detectada en: x=${hitPose.transform.position.x.toFixed(2)}, y=${hitPose.transform.position.y.toFixed(2)}, z=${hitPose.transform.position.z.toFixed(2)}`, 'success');
-                            updateStatus('🎯 Superficie detectada! Toca para colocar el objeto');
-                        }
-                    }
+                    document.getElementById('customModel').setAttribute('scale', `${scale} ${scale} ${scale}`);
                 }
             } else {
-                // No hay superficie
-                reticleDiv.style.borderColor = '#ff0';
-                reticleDiv.style.boxShadow = 'none';
-                if (!objectPlaced) {
-                    updateStatus('🔍 Moviendo cámara para detectar superficie...');
+                worldModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
+            }
+        }
+        
+        // ============================================
+        // FUNCIONES DE GRABACIÓN DE VIDEO
+        // ============================================
+        
+        async function startRecording() {
+            try {
+                // Capturar el canvas de A-Frame
+                const canvas = document.querySelector('a-scene').canvas;
+                if (!canvas) {
+                    statusText.innerHTML = '● ERROR: NO SE PUDO CAPTURAR EL CANVAS';
+                    return;
                 }
-            }
-            
-            // Renderizar la escena (Three.js lo hace automáticamente con setAnimationLoop)
-        }
-        
-        // Resetear la escena
-        function resetScene() {
-            if (currentObject) {
-                currentObject.visible = false;
-                currentObject.scale.set(1, 1, 1);
-                objectPlaced = false;
-                addLog('Escena reseteada - Puedes colocar el objeto nuevamente', 'warning');
-                updateStatus('🔄 Escena reseteada. Mueve la cámara para detectar superficie.');
-                document.getElementById('placeObject').style.display = 'block';
-            }
-        }
-        
-        // === CONFIGURAR EVENTOS UI ===
-        document.getElementById('startAR').addEventListener('click', startAR);
-        document.getElementById('placeObject').addEventListener('click', () => {
-            addLog('Botón "Colocar Objeto" presionado manualmente', 'info');
-            if (window.lastHitPose && currentObject && !objectPlaced) {
-                currentObject.position.copy(window.lastHitPose);
-                currentObject.visible = true;
-                objectPlaced = true;
-                addLog('Objeto colocado manualmente', 'success');
-                document.getElementById('placeObject').style.display = 'none';
                 
-                // Animación
-                currentObject.scale.set(0, 0, 0);
-                let scale = 0;
-                function animateScale() {
-                    scale += 0.05;
-                    if (scale < 1) {
-                        currentObject.scale.set(scale, scale, scale);
-                        requestAnimationFrame(animateScale);
+                // Crear stream desde el canvas
+                const fps = 30;
+                stream = canvas.captureStream(fps);
+                
+                // Configurar RecordRTC
+                recordRTC = new RecordRTC(stream, {
+                    type: 'video',
+                    mimeType: 'video/webm',
+                    bitsPerSecond: 5000000,
+                    video: {
+                        width: canvas.width,
+                        height: canvas.height
                     }
-                }
-                animateScale();
-            } else if (!window.lastHitPose) {
-                addLog('No hay superficie detectada. Mueve la cámara primero.', 'warning');
+                });
+                
+                recordRTC.startRecording();
+                isRecording = true;
+                
+                // Actualizar UI
+                recordBtn.classList.add('recording');
+                stopBtn.style.display = 'flex';
+                recordBtn.style.display = 'none';
+                statusText.innerHTML = '● 🔴 GRABANDO EXPERIENCIA AR...';
+                
+            } catch (error) {
+                console.error('Error al grabar:', error);
+                statusText.innerHTML = '● ERROR AL INICIAR GRABACIÓN';
             }
-        });
-        document.getElementById('resetAR').addEventListener('click', resetScene);
+        }
         
-        // Manejar resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        function stopRecording() {
+            if (recordRTC && isRecording) {
+                recordRTC.stopRecording(() => {
+                    const blob = recordRTC.getBlob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ar-brutalist-${Date.now()}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    // Limpiar
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    recordRTC = null;
+                    isRecording = false;
+                    
+                    // Actualizar UI
+                    recordBtn.classList.remove('recording');
+                    stopBtn.style.display = 'none';
+                    recordBtn.style.display = 'block';
+                    statusText.innerHTML = '● ✅ VIDEO GUARDADO | CONTINÚA CON AR';
+                });
+            }
+        }
         
-        // === INICIAR ===
-        initThree();
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
         
-        addLog('Aplicación lista. Presiona "Iniciar AR" para comenzar.', 'success');
-        updateStatus('Listo para iniciar AR');
+        function setupEventListeners() {
+            // Botón de inicio
+            startBtn.addEventListener('click', initApp);
+            
+            // Botones de tracking
+            document.querySelectorAll('.tracking-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tracking-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const mode = btn.getAttribute('data-tracking');
+                    setTrackingMode(mode);
+                });
+            });
+            
+            // Selector de marcador
+            markerSelect.addEventListener('change', (e) => {
+                if (currentTracking === 'image') {
+                    showSelectedMarker(e.target.value);
+                }
+            });
+            
+            // Control de escala
+            scaleSlider.addEventListener('input', (e) => {
+                updateModelScale(e.target.value);
+            });
+            
+            // Botones de grabación
+            recordBtn.addEventListener('click', startRecording);
+            stopBtn.addEventListener('click', stopRecording);
+            
+            // Botón reset
+            resetBtn.addEventListener('click', resetWorldModel);
+            
+            // Tocar pantalla para world tracking
+            document.addEventListener('click', (e) => {
+                // No colocar si se hizo clic en un botón
+                if (e.target.closest('.tracking-btn') || 
+                    e.target.closest('.marker-select') ||
+                    e.target.closest('#recordBtn') ||
+                    e.target.closest('#stopBtn') ||
+                    e.target.closest('#resetBtn') ||
+                    e.target.closest('#scaleSlider')) {
+                    return;
+                }
+                
+                if (currentTracking === 'world' && !worldPlaced) {
+                    placeWorldModel();
+                }
+            });
+        }
         
-        // Verificación de ARCore
-        setTimeout(() => {
-            addLog('Consejo: Si no detecta superficies, asegúrate de tener ARCore instalado desde Play Store', 'info');
-        }, 2000);
+        // ============================================
+        // DESCARGA DE MARCADORES (OPCIONAL)
+        // ============================================
+        
+        // Instrucción para descargar marcadores
+        console.log('%c📌 MARCADORES AR.JS', 'color: #2ecc2e; font-size: 16px; font-weight: bold;');
+        console.log('%c1. HIRO marker: https://jeromeetienne.github.io/AR.js/data/images/HIRO.jpg', 'color: #888');
+        console.log('%c2. KANJI marker: https://jeromeetienne.github.io/AR.js/data/images/KANJI.jpg', 'color: #888');
+        console.log('%c3. Generador de marcadores personalizados: https://jeromeetienne.github.io/AR.js/three.js/examples/marker-training/examples/generator.html', 'color: #2ecc2e');
+        
+        // Advertencia sobre world tracking en AR.js
+        console.log('%c⚠️ NOTA: AR.js no tiene hit-test nativo. El world tracking simula posición frente a cámara.', 'color: #ffaa00');
     </script>
 </body>
 </html>
