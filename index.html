@@ -2,45 +2,48 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Brutalist - Realidad Aumentada con AR.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>AR Studio - Realidad Aumentada Personalizable</title>
     
-    <!-- Google Fonts para tipografías modernas -->
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     
     <!-- A-Frame y AR.js -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-ar.js@3.0.2/aframe-ar.min.js"></script>
     
-    <!-- Componente de grabación de pantalla -->
+    <!-- RecordRTC para grabación -->
     <script src="https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js"></script>
+    
+    <!-- html2canvas para captura de fotos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         
         body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: #0a0a0a;
+            font-family: 'Inter', sans-serif;
+            background: #000;
             overflow: hidden;
             position: fixed;
             width: 100%;
             height: 100%;
         }
         
-        /* Pantalla de inicio brutalista */
+        /* Pantalla de inicio */
         .start-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #0a0a0a;
-            z-index: 1000;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            z-index: 2000;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -48,165 +51,224 @@
             transition: opacity 0.5s ease;
         }
         
-        .brutalist-container {
-            max-width: 500px;
-            width: 90%;
-            padding: 40px 30px;
-            background: #111;
-            border: 3px solid #2ecc2e;
-            box-shadow: 12px 12px 0 rgba(46, 204, 46, 0.3);
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
         }
         
-        .brutalist-title {
-            font-size: 3.5rem;
+        .logo h1 {
+            font-size: 3rem;
             font-weight: 700;
-            letter-spacing: -2px;
-            color: #fff;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #2ecc2e;
-            display: inline-block;
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
-        .brutalist-subtitle {
-            font-family: 'JetBrains Mono', monospace;
+        .logo p {
             color: #888;
-            font-size: 0.85rem;
-            margin-bottom: 30px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            margin-top: 10px;
         }
         
-        .instruction-card {
-            background: #1a1a1a;
-            border-left: 4px solid #2ecc2e;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        
-        .instruction-card h3 {
-            color: #2ecc2e;
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-        }
-        
-        .instruction-card ul {
-            list-style: none;
-        }
-        
-        .instruction-card li {
-            color: #ccc;
-            font-size: 0.9rem;
-            margin: 12px 0;
-            padding-left: 20px;
-            position: relative;
-        }
-        
-        .instruction-card li::before {
-            content: "▸";
-            color: #2ecc2e;
-            position: absolute;
-            left: 0;
-        }
-        
-        .btn-brutalist {
-            background: transparent;
-            border: 2px solid #2ecc2e;
-            color: #2ecc2e;
-            padding: 15px 40px;
-            font-size: 1.2rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'Space Grotesk', sans-serif;
-            margin-top: 20px;
-            width: 100%;
-        }
-        
-        .btn-brutalist:hover {
-            background: #2ecc2e;
-            color: #0a0a0a;
-            box-shadow: 6px 6px 0 rgba(46, 204, 46, 0.3);
-            transform: translate(-3px, -3px);
-        }
-        
-        /* Panel de control brutalista */
-        .control-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(10, 10, 10, 0.95);
+        .instructions {
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 20px;
+            max-width: 350px;
             backdrop-filter: blur(10px);
-            border: 1px solid #2ecc2e;
-            padding: 15px 20px;
-            z-index: 200;
-            display: none;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            align-items: center;
-            border-radius: 0;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
         }
         
-        .tracking-selector {
+        .instructions h3 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+        
+        .instructions li {
+            color: #ccc;
+            margin: 10px 0;
+            margin-left: 20px;
+        }
+        
+        .start-btn {
+            background: linear-gradient(135deg, #00ff88, #00ccff);
+            border: none;
+            padding: 16px 48px;
+            border-radius: 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #000;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .start-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* UI Principal */
+        .ui-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 16px;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        /* Pestañas */
+        .tabs {
             display: flex;
             gap: 8px;
-            background: #1a1a1a;
-            padding: 5px;
-            border: 1px solid #333;
+            background: rgba(255,255,255,0.05);
+            padding: 4px;
+            border-radius: 50px;
         }
         
-        .tracking-btn {
-            background: transparent;
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
             border: none;
-            color: #888;
-            padding: 10px 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
+            background: transparent;
+            color: #aaa;
             font-weight: 600;
+            border-radius: 40px;
             cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
+            transition: all 0.2s;
+            font-size: 0.85rem;
         }
         
-        .tracking-btn.active {
-            background: #2ecc2e;
-            color: #0a0a0a;
+        .tab-btn.active {
+            background: #00ff88;
+            color: #000;
         }
         
-        .marker-select {
-            background: #1a1a1a;
-            border: 1px solid #333;
+        /* Paneles */
+        .panel {
+            display: none;
+            gap: 12px;
+            flex-wrap: wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .panel.active {
+            display: flex;
+        }
+        
+        /* Items de modelo/marcador */
+        .model-item, .marker-item {
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
             padding: 10px 15px;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
         }
         
-        .marker-select option {
-            background: #1a1a1a;
+        .model-item.active, .marker-item.active {
+            border-color: #00ff88;
+            background: rgba(0,255,136,0.1);
         }
         
-        .record-btn {
+        .model-preview, .marker-preview {
+            width: 40px;
+            height: 40px;
+            background: #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .model-info, .marker-info {
+            flex: 1;
+        }
+        
+        .model-name, .marker-name {
+            color: white;
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        
+        .model-type, .marker-type {
+            color: #888;
+            font-size: 0.7rem;
+        }
+        
+        /* Controles */
+        .controls-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        
+        .scale-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.05);
+            padding: 8px 15px;
+            border-radius: 40px;
+        }
+        
+        .scale-control label {
+            color: #aaa;
+            font-size: 0.8rem;
+        }
+        
+        .scale-control input {
+            width: 120px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-btn {
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: #ff0000;
-            border: 3px solid #fff;
+            border: none;
             cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        
+        .record-btn {
+            background: #ff0000;
+            color: white;
         }
         
         .record-btn.recording {
             animation: pulse 1s infinite;
-            background: #cc0000;
+        }
+        
+        .photo-btn {
+            background: #333;
+            color: white;
+        }
+        
+        .reset-btn {
+            background: #ff4444;
+            color: white;
         }
         
         @keyframes pulse {
@@ -214,127 +276,68 @@
             50% { transform: scale(1.1); opacity: 0.8; }
         }
         
-        .stop-btn {
-            width: 50px;
-            height: 50px;
-            background: #333;
-            border: 3px solid #fff;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .stop-btn::after {
-            content: "■";
-            color: #fff;
-            font-size: 24px;
-        }
-        
-        .reset-btn {
-            background: #1a1a1a;
-            border: 1px solid #ff4444;
-            color: #ff4444;
-            padding: 10px 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-        }
-        
+        /* Barra de estado */
         .status-bar {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            background: rgba(10, 10, 10, 0.9);
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(10px);
-            border-left: 4px solid #2ecc2e;
-            padding: 12px 20px;
-            z-index: 200;
+            padding: 10px 15px;
+            border-radius: 30px;
+            z-index: 1000;
             display: none;
-            font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
-            color: #2ecc2e;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            color: #00ff88;
+            text-align: center;
         }
         
-        .model-controls {
-            display: flex;
-            gap: 8px;
-            align-items: center;
+        /* Scrollbar personalizado */
+        .panel::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .panel::-webkit-scrollbar-track {
             background: #1a1a1a;
-            padding: 5px 12px;
+            border-radius: 4px;
         }
         
-        .model-controls label {
-            color: #888;
-            font-size: 0.7rem;
-            font-family: 'JetBrains Mono', monospace;
+        .panel::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 4px;
         }
         
-        .model-controls input {
-            width: 100px;
-            background: #0a0a0a;
-            border: 1px solid #333;
-            color: #2ecc2e;
-            padding: 5px;
-        }
-        
-        @media (max-width: 768px) {
-            .control-panel {
-                flex-direction: column;
-                bottom: 10px;
-                left: 10px;
-                right: 10px;
+        @media (min-width: 768px) {
+            .ui-container {
+                left: auto;
+                right: 20px;
+                bottom: 20px;
+                width: 380px;
+                border-radius: 24px;
+                border: 1px solid rgba(255,255,255,0.1);
             }
-            
-            .brutalist-title {
-                font-size: 2.2rem;
-            }
-            
-            .tracking-selector {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .marker-select {
-                width: 100%;
-            }
-            
-            .reset-btn {
-                width: 100%;
-            }
-        }
-        
-        /* Ocultar el mensaje de orientación de A-Frame */
-        .a-loader-title {
-            display: none;
         }
     </style>
 </head>
 <body>
     <!-- Pantalla de inicio -->
     <div class="start-screen" id="startScreen">
-        <div class="brutalist-container">
-            <div class="brutalist-title">AR<br>BRUTALIST</div>
-            <div class="brutalist-subtitle">AUGMENTED REALITY EXPERIENCE</div>
-            
-            <div class="instruction-card">
-                <h3>▸ INSTRUCCIONES</h3>
-                <ul>
-                    <li>Permite el acceso a la cámara</li>
-                    <li>Para IMAGE TRACKING: enfoca el marcador impreso</li>
-                    <li>Para WORLD TRACKING: toca donde colocar el modelo</li>
-                    <li>Usa el botón rojo para grabar tu experiencia</li>
-                    <li>Ajusta escala y posición en tiempo real</li>
-                </ul>
-            </div>
-            
-            <button class="btn-brutalist" id="startBtn">INICIAR ▸</button>
+        <div class="logo">
+            <h1>AR STUDIO</h1>
+            <p>Realidad Aumentada Personalizable</p>
         </div>
+        <div class="instructions">
+            <h3>📱 CÓMO USAR</h3>
+            <ul>
+                <li>📸 Permite acceso a la cámara</li>
+                <li>🖼️ IMAGE TRACKING: Enfoca el marcador</li>
+                <li>🌍 WORLD TRACKING: Toca donde colocar</li>
+                <li>🎨 Selecciona modelos y marcadores</li>
+                <li>🎥 Graba video o toma fotos</li>
+            </ul>
+        </div>
+        <button class="start-btn" id="startBtn">INICIAR EXPERIENCIA</button>
     </div>
     
     <!-- Barra de estado -->
@@ -342,32 +345,46 @@
         <span id="statusText">● SISTEMA LISTO</span>
     </div>
     
-    <!-- Panel de control -->
-    <div class="control-panel" id="controlPanel">
-        <div class="tracking-selector">
-            <button class="tracking-btn active" data-tracking="image">IMAGE</button>
-            <button class="tracking-btn" data-tracking="world">WORLD</button>
+    <!-- UI Principal -->
+    <div class="ui-container" id="uiContainer">
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="models">📦 MODELOS</button>
+            <button class="tab-btn" data-tab="markers">🏷️ MARCADORES</button>
+            <button class="tab-btn" data-tab="tracking">🎯 TRACKING</button>
         </div>
         
-        <select class="marker-select" id="markerSelect">
-            <option value="hiro">HIRO (DEFAULT)</option>
-            <option value="kanji">KANJI</option>
-            <option value="custom">CUSTOM MARKER</option>
-        </select>
-        
-        <div class="model-controls">
-            <label>ESCALA</label>
-            <input type="range" id="scaleSlider" min="0.1" max="3" step="0.05" value="0.8">
-            <span id="scaleValue" style="color:#2ecc2e;width:35px;">0.8</span>
+        <!-- Panel de Modelos -->
+        <div class="panel" id="modelsPanel">
+            <!-- Los modelos se cargarán dinámicamente -->
         </div>
         
-        <div class="record-btn" id="recordBtn"></div>
-        <div class="stop-btn" id="stopBtn"></div>
+        <!-- Panel de Marcadores -->
+        <div class="panel" id="markersPanel">
+            <!-- Los marcadores se cargarán dinámicamente -->
+        </div>
         
-        <button class="reset-btn" id="resetBtn">RESET</button>
+        <!-- Panel de Tracking -->
+        <div class="panel" id="trackingPanel">
+            <div class="controls-row">
+                <div class="scale-control">
+                    <label>🔍 ESCALA</label>
+                    <input type="range" id="scaleSlider" min="0.1" max="3" step="0.05" value="0.8">
+                    <span id="scaleValue" style="color:#00ff88; width:35px;">0.8</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn photo-btn" id="photoBtn">📷</button>
+                    <button class="action-btn record-btn" id="recordBtn">🔴</button>
+                    <button class="action-btn reset-btn" id="resetBtn">⟳</button>
+                </div>
+            </div>
+            <div id="stopBtn" style="display:none;">
+                <button class="action-btn" style="background:#333; width:100%;" id="stopRecordingBtn">⏹️ DETENER</button>
+            </div>
+        </div>
     </div>
     
-    <!-- Escena A-Frame con AR.js -->
+    <!-- Escena AR -->
     <a-scene 
         id="arScene"
         embedded 
@@ -376,257 +393,313 @@
         vr-mode-ui='enabled: false'
         device-orientation-permission-ui='enabled: false'
     >
-        <!-- Cámara para WORLD TRACKING (se activa/desactiva dinámicamente) -->
-        <a-entity id="worldCamera" camera position="0 1.6 0" look-controls></a-entity>
+        <!-- Cámara -->
+        <a-entity id="arCamera" camera position="0 1.6 0" look-controls></a-entity>
         
-        <!-- Marcador HIRO (Image Tracking) -->
-        <a-marker id="hiroMarker" preset="hiro" smooth="true" smoothCount="5" smoothTolerance="0.01" threshold="25">
-            <a-entity id="hiroModel" gltf-model="https://cdn.glitch.com/0cb47f7b-2f7c-4d6e-8a3f-8b9e2a1f4c5d/tree.gltf?v=123" scale="0.8 0.8 0.8" position="0 0 0"></a-entity>
+        <!-- Contenedor de modelos de imagen tracking -->
+        <a-marker id="activeImageMarker" preset="hiro" smooth="true" visible="false">
+            <a-entity id="imageTrackedModel"></a-entity>
         </a-marker>
         
-        <!-- Marcador KANJI (Image Tracking) -->
-        <a-marker id="kanjiMarker" preset="kanji" smooth="true" smoothCount="5" smoothTolerance="0.01" threshold="25">
-            <a-entity id="kanjiModel">
-                <a-box color="#ff3366" depth="0.5" height="0.5" width="0.5" material="roughness:0.2; metalness:0.8"></a-box>
-                <a-text value="KANJI" color="white" align="center" position="0 0.4 0" scale="0.5 0.5 0.5"></a-text>
-            </a-entity>
-        </a-marker>
-        
-        <!-- Marcador personalizado (requiere archivo .patt) -->
-        <a-marker id="customMarker" type="pattern" url="markers/custom-marker.patt" smooth="true">
-            <a-entity id="customModel">
-                <a-sphere color="#2ecc2e" radius="0.3" position="0 0.3 0"></a-sphere>
-                <a-torus color="#ffffff" radius="0.4" radius-tubular="0.05" position="0 0.3 0"></a-torus>
-            </a-entity>
-        </a-marker>
-        
-        <!-- Entidad para WORLD TRACKING (se posiciona dinámicamente) -->
-        <a-entity id="worldModel" visible="false">
-            <a-box color="#2ecc2e" depth="0.4" height="0.4" width="0.4" material="roughness:0.3; metalness:0.7"></a-box>
-            <a-sphere color="#ffffff" radius="0.25" position="0 0.4 0" opacity="0.5"></a-sphere>
-            <a-torus color="#2ecc2e" radius="0.35" radius-tubular="0.03" rotation="90 0 0" position="0 0.2 0"></a-torus>
+        <!-- Contenedor de modelo world tracking -->
+        <a-entity id="worldTrackedModel" visible="false">
+            <a-box color="#00ff88" depth="0.4" height="0.4" width="0.4" material="roughness:0.3"></a-box>
         </a-entity>
         
-        <!-- Luz ambiental y direccional -->
+        <!-- Luces -->
         <a-light type="ambient" intensity="0.6"></a-light>
         <a-light type="directional" intensity="0.8" position="5 10 7"></a-light>
-        <a-light type="point" intensity="0.5" position="0 2 -3"></a-light>
     </a-scene>
     
     <script>
         // ============================================
-        // CONFIGURACIÓN PRINCIPAL
+        // CONFIGURACIÓN INICIAL
         // ============================================
         
         // Elementos DOM
         const startScreen = document.getElementById('startScreen');
         const startBtn = document.getElementById('startBtn');
-        const controlPanel = document.getElementById('controlPanel');
+        const uiContainer = document.getElementById('uiContainer');
         const statusBar = document.getElementById('statusBar');
         const statusText = document.getElementById('statusText');
-        const recordBtn = document.getElementById('recordBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const resetBtn = document.getElementById('resetBtn');
+        const modelsPanel = document.getElementById('modelsPanel');
+        const markersPanel = document.getElementById('markersPanel');
         const scaleSlider = document.getElementById('scaleSlider');
         const scaleValue = document.getElementById('scaleValue');
-        const markerSelect = document.getElementById('markerSelect');
+        const recordBtn = document.getElementById('recordBtn');
+        const photoBtn = document.getElementById('photoBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const stopRecordingBtn = document.getElementById('stopRecordingBtn');
         
-        // Elementos de la escena AR
-        const hiroMarker = document.getElementById('hiroMarker');
-        const kanjiMarker = document.getElementById('kanjiMarker');
-        const customMarker = document.getElementById('customMarker');
-        const worldModel = document.getElementById('worldModel');
-        const worldCamera = document.getElementById('worldCamera');
-        const hiroModel = document.getElementById('hiroModel');
+        // Elementos AR
+        const activeImageMarker = document.getElementById('activeImageMarker');
+        const imageTrackedModel = document.getElementById('imageTrackedModel');
+        const worldTrackedModel = document.getElementById('worldTrackedModel');
         
-        // Variables de estado
-        let currentTracking = 'image'; // 'image' o 'world'
+        // Estado
+        let currentTracking = 'image';
+        let currentModelUrl = null;
+        let currentModelName = null;
+        let currentMarkerType = 'hiro';
+        let currentMarkerUrl = null;
+        let worldPlaced = false;
         let isRecording = false;
         let recordRTC = null;
         let stream = null;
-        let worldPlaced = false;
         
         // ============================================
-        // FUNCIONES DE INICIALIZACIÓN
+        // CARGA DINÁMICA DE MODELOS
         // ============================================
         
-        // Iniciar la aplicación
-        function initApp() {
-            // Ocultar pantalla de inicio
-            startScreen.style.opacity = '0';
-            setTimeout(() => {
-                startScreen.style.display = 'none';
-                controlPanel.style.display = 'flex';
-                statusBar.style.display = 'block';
-            }, 500);
+        // Lista de modelos predefinidos + los que encuentre en la carpeta models
+        const modelLibrary = [
+            { name: 'Cubo Demo', type: 'primitive', url: null, icon: '📦', primitive: 'box', color: '#00ff88' },
+            { name: 'Esfera Demo', type: 'primitive', url: null, icon: '⚪', primitive: 'sphere', color: '#ff6600' },
+            { name: 'Toro Demo', type: 'primitive', url: null, icon: '🌀', primitive: 'torus', color: '#ff3366' }
+        ];
+        
+        // Escanear modelos disponibles en la carpeta models/
+        async function scanModels() {
+            // Modelos GLTF predefinidos que podrías tener
+            const gltfModels = [
+                { name: 'Árbol', file: 'MaizToken-11.gltf', icon: '🌳' },
+                { name: 'Robot', file: 'MaizToken-15.gltf', icon: '🤖' },
+                { name: 'Nave', file: 'MaizToken-16.gltf', icon: '🚀' },
+                { name: 'Personaje', file: 'MaizToken-18.gltf', icon: '🧑' }
+            ];
             
-            // Configurar tracking inicial
-            setTrackingMode('image');
-            
-            // Configurar listeners
-            setupEventListeners();
-            
-            // Inicializar cámara (AR.js lo maneja automáticamente)
-            statusText.innerHTML = '● CÁMARA ACTIVA | MODO: IMAGE TRACKING';
-            
-            // Verificar si es iOS para mostrar advertencia
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            if (isIOS) {
-                statusText.innerHTML = '⚠️ iOS DETECTADO | PERMITE CÁMARA MANUALMENTE';
+            // Agregar modelos GLTF a la librería
+            for (const model of gltfModels) {
+                const url = `models/${model.file}`;
+                // Verificar si existe (intentando cargar)
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    if (response.ok) {
+                        modelLibrary.push({
+                            name: model.name,
+                            type: 'gltf',
+                            url: url,
+                            icon: model.icon,
+                            primitive: null
+                        });
+                    }
+                } catch(e) {
+                    console.log(`Modelo ${model.file} no encontrado`);
+                }
             }
         }
         
-        // Configurar modo de tracking
+        // Renderizar modelos en UI
+        function renderModels() {
+            modelsPanel.innerHTML = '';
+            modelLibrary.forEach(model => {
+                const modelDiv = document.createElement('div');
+                modelDiv.className = 'model-item';
+                if (currentModelName === model.name) modelDiv.classList.add('active');
+                modelDiv.innerHTML = `
+                    <div class="model-preview">${model.icon}</div>
+                    <div class="model-info">
+                        <div class="model-name">${model.name}</div>
+                        <div class="model-type">${model.type.toUpperCase()}</div>
+                    </div>
+                `;
+                modelDiv.addEventListener('click', () => loadModel(model));
+                modelsPanel.appendChild(modelDiv);
+            });
+        }
+        
+        // Cargar modelo seleccionado
+        function loadModel(model) {
+            currentModelName = model.name;
+            currentModelUrl = model.url;
+            
+            // Actualizar UI
+            document.querySelectorAll('.model-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.model-item')?.classList.add('active');
+            
+            if (currentTracking === 'image') {
+                // Cargar en image tracking
+                imageTrackedModel.innerHTML = '';
+                
+                if (model.type === 'primitive') {
+                    const entity = document.createElement(`a-${model.primitive}`);
+                    entity.setAttribute('color', model.color);
+                    entity.setAttribute('scale', `${scaleSlider.value} ${scaleSlider.value} ${scaleSlider.value}`);
+                    if (model.primitive === 'box') entity.setAttribute('depth', '0.5');
+                    if (model.primitive === 'box') entity.setAttribute('height', '0.5');
+                    if (model.primitive === 'box') entity.setAttribute('width', '0.5');
+                    if (model.primitive === 'sphere') entity.setAttribute('radius', '0.3');
+                    if (model.primitive === 'torus') entity.setAttribute('radius', '0.3');
+                    imageTrackedModel.appendChild(entity);
+                } else if (model.type === 'gltf' && model.url) {
+                    const entity = document.createElement('a-entity');
+                    entity.setAttribute('gltf-model', model.url);
+                    entity.setAttribute('scale', `${scaleSlider.value} ${scaleSlider.value} ${scaleSlider.value}`);
+                    imageTrackedModel.appendChild(entity);
+                }
+                
+                statusText.innerHTML = `● MODELO CARGADO: ${model.name}`;
+            } else {
+                // Cargar en world tracking
+                worldTrackedModel.innerHTML = '';
+                
+                if (model.type === 'primitive') {
+                    const entity = document.createElement(`a-${model.primitive}`);
+                    entity.setAttribute('color', model.color);
+                    entity.setAttribute('scale', `${scaleSlider.value} ${scaleSlider.value} ${scaleSlider.value}`);
+                    if (model.primitive === 'box') {
+                        entity.setAttribute('depth', '0.4');
+                        entity.setAttribute('height', '0.4');
+                        entity.setAttribute('width', '0.4');
+                    }
+                    if (model.primitive === 'sphere') entity.setAttribute('radius', '0.25');
+                    if (model.primitive === 'torus') entity.setAttribute('radius', '0.3');
+                    worldTrackedModel.appendChild(entity);
+                } else if (model.type === 'gltf' && model.url) {
+                    const entity = document.createElement('a-entity');
+                    entity.setAttribute('gltf-model', model.url);
+                    entity.setAttribute('scale', `${scaleSlider.value} ${scaleSlider.value} ${scaleSlider.value}`);
+                    worldTrackedModel.appendChild(entity);
+                }
+                
+                statusText.innerHTML = `● MODELO LISTO PARA COLOCAR: ${model.name}`;
+            }
+        }
+        
+        // ============================================
+        // CARGA DINÁMICA DE MARCADORES
+        // ============================================
+        
+        const markerLibrary = [
+            { name: 'HIRO', type: 'preset', value: 'hiro', icon: '🎯', url: null },
+            { name: 'KANJI', type: 'preset', value: 'kanji', icon: '📜', url: null }
+        ];
+        
+        function renderMarkers() {
+            markersPanel.innerHTML = '';
+            markerLibrary.forEach(marker => {
+                const markerDiv = document.createElement('div');
+                markerDiv.className = 'marker-item';
+                if (currentMarkerType === marker.value) markerDiv.classList.add('active');
+                markerDiv.innerHTML = `
+                    <div class="marker-preview">${marker.icon}</div>
+                    <div class="marker-info">
+                        <div class="marker-name">${marker.name}</div>
+                        <div class="marker-type">${marker.type.toUpperCase()}</div>
+                    </div>
+                `;
+                markerDiv.addEventListener('click', () => selectMarker(marker));
+                markersPanel.appendChild(markerDiv);
+            });
+        }
+        
+        function selectMarker(marker) {
+            currentMarkerType = marker.value;
+            currentMarkerUrl = marker.url;
+            
+            document.querySelectorAll('.marker-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.marker-item')?.classList.add('active');
+            
+            if (marker.type === 'preset') {
+                activeImageMarker.setAttribute('preset', marker.value);
+                activeImageMarker.setAttribute('type', 'preset');
+                activeImageMarker.removeAttribute('url');
+            } else if (marker.type === 'pattern' && marker.url) {
+                activeImageMarker.setAttribute('type', 'pattern');
+                activeImageMarker.setAttribute('url', marker.url);
+                activeImageMarker.removeAttribute('preset');
+            }
+            
+            statusText.innerHTML = `● MARCADOR SELECCIONADO: ${marker.name}`;
+        }
+        
+        // ============================================
+        // TRACKING MODES
+        // ============================================
+        
         function setTrackingMode(mode) {
             currentTracking = mode;
             
             if (mode === 'image') {
-                // Activar markers, desactivar world tracking
-                hiroMarker.setAttribute('visible', 'true');
-                kanjiMarker.setAttribute('visible', 'true');
-                customMarker.setAttribute('visible', 'true');
-                worldModel.setAttribute('visible', 'false');
-                worldModel.setAttribute('position', '0 0 0');
+                activeImageMarker.setAttribute('visible', 'true');
+                worldTrackedModel.setAttribute('visible', 'false');
                 worldPlaced = false;
-                
-                // Seleccionar marker según dropdown
-                const selectedMarker = markerSelect.value;
-                showSelectedMarker(selectedMarker);
-                
-                statusText.innerHTML = '● MODO: IMAGE TRACKING | ENFOQUE EL MARCADOR';
+                statusText.innerHTML = `● MODO IMAGE TRACKING | Enfoca el marcador ${currentMarkerType.toUpperCase()}`;
             } else {
-                // Modo world tracking: desactivar markers
-                hiroMarker.setAttribute('visible', 'false');
-                kanjiMarker.setAttribute('visible', 'false');
-                customMarker.setAttribute('visible', 'false');
-                
-                // Mostrar modelo world para colocar
-                worldModel.setAttribute('visible', 'true');
-                
-                statusText.innerHTML = '● MODO: WORLD TRACKING | TOCA LA PANTALLA PARA COLOCAR';
+                activeImageMarker.setAttribute('visible', 'false');
+                worldTrackedModel.setAttribute('visible', 'true');
+                statusText.innerHTML = '● MODO WORLD TRACKING | Toca la pantalla para colocar el modelo';
             }
         }
         
-        // Mostrar el marker seleccionado (ocultar los otros)
-        function showSelectedMarker(markerType) {
-            if (markerType === 'hiro') {
-                hiroMarker.setAttribute('visible', 'true');
-                kanjiMarker.setAttribute('visible', 'false');
-                customMarker.setAttribute('visible', 'false');
-                statusText.innerHTML = '● MARCADOR: HIRO | ENFOQUE EL PATRÓN';
-            } else if (markerType === 'kanji') {
-                hiroMarker.setAttribute('visible', 'false');
-                kanjiMarker.setAttribute('visible', 'true');
-                customMarker.setAttribute('visible', 'false');
-                statusText.innerHTML = '● MARCADOR: KANJI | ENFOQUE EL PATRÓN';
-            } else if (markerType === 'custom') {
-                hiroMarker.setAttribute('visible', 'false');
-                kanjiMarker.setAttribute('visible', 'false');
-                customMarker.setAttribute('visible', 'true');
-                statusText.innerHTML = '● MARCADOR: CUSTOM | USA TU PROPIO PATRÓN';
-            }
-        }
-        
-        // Colocar modelo en world tracking (AR.js no tiene hit-test nativo,
-        // usamos una aproximación con la orientación de la cámara)
         function placeWorldModel() {
             if (!worldPlaced && currentTracking === 'world') {
-                // Obtener la posición de la cámara en el espacio 3D
-                const cameraEl = document.querySelector('a-camera');
+                const cameraEl = document.querySelector('[camera]');
                 if (cameraEl && cameraEl.object3D) {
-                    // Obtener dirección hacia adelante
                     const forward = new THREE.Vector3(0, 0, -1);
                     forward.applyQuaternion(cameraEl.object3D.quaternion);
                     
-                    // Posicionar a 1.5 metros frente a la cámara
                     const posX = cameraEl.object3D.position.x + forward.x * 1.5;
                     const posZ = cameraEl.object3D.position.z + forward.z * 1.5;
-                    const posY = 0; // Nivel del suelo
                     
-                    worldModel.setAttribute('position', `${posX} ${posY} ${posZ}`);
+                    worldTrackedModel.setAttribute('position', `${posX} 0 ${posZ}`);
                     worldPlaced = true;
                     
-                    statusText.innerHTML = '● MODELO COLOCADO | PUEDES MOVERTE ALREDEDOR';
+                    // Animación de aparición
+                    worldTrackedModel.setAttribute('animation', 'property: scale; from: 0 0 0; to: 0.8 0.8 0.8; dur: 300');
+                    setTimeout(() => worldTrackedModel.removeAttribute('animation'), 350);
                     
-                    // Animación sutil de aparición
-                    worldModel.setAttribute('animation', 'property: scale; from: 0 0 0; to: 0.8 0.8 0.8; dur: 300; easing: ease-out');
-                    setTimeout(() => {
-                        worldModel.removeAttribute('animation');
-                    }, 350);
+                    statusText.innerHTML = '✅ MODELO COLOCADO | Puedes moverte alrededor';
                 }
-            } else if (worldPlaced) {
-                statusText.innerHTML = '● MODELO YA COLOCADO | USA RESET PARA REUBICAR';
             }
         }
         
-        // Resetear posición en world tracking
         function resetWorldModel() {
             if (currentTracking === 'world') {
                 worldPlaced = false;
-                worldModel.setAttribute('visible', 'true');
-                statusText.innerHTML = '● POSICIÓN RESETEADA | TOCA PARA COLOCAR NUEVAMENTE';
+                statusText.innerHTML = '● POSICIÓN RESETEADA | Toca para colocar nuevamente';
             }
         }
         
-        // Actualizar escala del modelo activo
-        function updateModelScale(value) {
+        // Actualizar escala
+        function updateScale(value) {
             const scale = parseFloat(value);
             scaleValue.textContent = scale.toFixed(2);
             
             if (currentTracking === 'image') {
-                const selectedMarker = markerSelect.value;
-                if (selectedMarker === 'hiro') {
-                    hiroModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
-                } else if (selectedMarker === 'kanji') {
-                    document.getElementById('kanjiModel').setAttribute('scale', `${scale} ${scale} ${scale}`);
-                } else {
-                    document.getElementById('customModel').setAttribute('scale', `${scale} ${scale} ${scale}`);
-                }
+                imageTrackedModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
             } else {
-                worldModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
+                worldTrackedModel.setAttribute('scale', `${scale} ${scale} ${scale}`);
             }
         }
         
         // ============================================
-        // FUNCIONES DE GRABACIÓN DE VIDEO
+        // GRABACIÓN DE VIDEO Y FOTOS
         // ============================================
         
         async function startRecording() {
             try {
-                // Capturar el canvas de A-Frame
                 const canvas = document.querySelector('a-scene').canvas;
-                if (!canvas) {
-                    statusText.innerHTML = '● ERROR: NO SE PUDO CAPTURAR EL CANVAS';
-                    return;
-                }
+                if (!canvas) throw new Error('Canvas no disponible');
                 
-                // Crear stream desde el canvas
-                const fps = 30;
-                stream = canvas.captureStream(fps);
-                
-                // Configurar RecordRTC
+                stream = canvas.captureStream(30);
                 recordRTC = new RecordRTC(stream, {
                     type: 'video',
                     mimeType: 'video/webm',
-                    bitsPerSecond: 5000000,
-                    video: {
-                        width: canvas.width,
-                        height: canvas.height
-                    }
+                    bitsPerSecond: 5000000
                 });
                 
                 recordRTC.startRecording();
                 isRecording = true;
                 
-                // Actualizar UI
                 recordBtn.classList.add('recording');
-                stopBtn.style.display = 'flex';
                 recordBtn.style.display = 'none';
-                statusText.innerHTML = '● 🔴 GRABANDO EXPERIENCIA AR...';
+                document.getElementById('stopBtn').style.display = 'block';
+                statusText.innerHTML = '🔴 GRABANDO VIDEO...';
                 
             } catch (error) {
-                console.error('Error al grabar:', error);
-                statusText.innerHTML = '● ERROR AL INICIAR GRABACIÓN';
+                console.error(error);
+                statusText.innerHTML = '❌ Error al grabar';
             }
         }
         
@@ -637,95 +710,116 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `ar-brutalist-${Date.now()}.webm`;
-                    document.body.appendChild(a);
+                    a.download = `ar-video-${Date.now()}.webm`;
                     a.click();
-                    document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     
-                    // Limpiar
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
+                    if (stream) stream.getTracks().forEach(t => t.stop());
                     recordRTC = null;
                     isRecording = false;
                     
-                    // Actualizar UI
                     recordBtn.classList.remove('recording');
-                    stopBtn.style.display = 'none';
                     recordBtn.style.display = 'block';
-                    statusText.innerHTML = '● ✅ VIDEO GUARDADO | CONTINÚA CON AR';
+                    document.getElementById('stopBtn').style.display = 'none';
+                    statusText.innerHTML = '✅ VIDEO GUARDADO';
                 });
             }
+        }
+        
+        async function takePhoto() {
+            try {
+                const scene = document.querySelector('a-scene');
+                const canvas = scene.canvas;
+                
+                // Crear un canvas temporal para la foto
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, 0);
+                
+                // Descargar
+                tempCanvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `ar-photo-${Date.now()}.jpg`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    statusText.innerHTML = '📸 FOTO GUARDADA';
+                }, 'image/jpeg', 0.9);
+                
+            } catch (error) {
+                console.error(error);
+                statusText.innerHTML = '❌ Error al tomar foto';
+            }
+        }
+        
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        
+        async function initApp() {
+            // Escanear modelos disponibles
+            await scanModels();
+            renderModels();
+            renderMarkers();
+            
+            // Configurar UI
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                uiContainer.style.display = 'flex';
+                statusBar.style.display = 'block';
+            }, 500);
+            
+            // Configurar tracking inicial
+            setTrackingMode('image');
+            selectMarker(markerLibrary[0]);
+            
+            // Cargar modelo por defecto
+            if (modelLibrary.length > 0) {
+                loadModel(modelLibrary[0]);
+            }
+            
+            statusText.innerHTML = '● AR LISTO | Selecciona modelos y marcadores';
         }
         
         // ============================================
         // EVENT LISTENERS
         // ============================================
         
-        function setupEventListeners() {
-            // Botón de inicio
-            startBtn.addEventListener('click', initApp);
-            
-            // Botones de tracking
-            document.querySelectorAll('.tracking-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.tracking-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    const mode = btn.getAttribute('data-tracking');
-                    setTrackingMode(mode);
-                });
-            });
-            
-            // Selector de marcador
-            markerSelect.addEventListener('change', (e) => {
-                if (currentTracking === 'image') {
-                    showSelectedMarker(e.target.value);
-                }
-            });
-            
-            // Control de escala
-            scaleSlider.addEventListener('input', (e) => {
-                updateModelScale(e.target.value);
-            });
-            
-            // Botones de grabación
-            recordBtn.addEventListener('click', startRecording);
-            stopBtn.addEventListener('click', stopRecording);
-            
-            // Botón reset
-            resetBtn.addEventListener('click', resetWorldModel);
-            
-            // Tocar pantalla para world tracking
-            document.addEventListener('click', (e) => {
-                // No colocar si se hizo clic en un botón
-                if (e.target.closest('.tracking-btn') || 
-                    e.target.closest('.marker-select') ||
-                    e.target.closest('#recordBtn') ||
-                    e.target.closest('#stopBtn') ||
-                    e.target.closest('#resetBtn') ||
-                    e.target.closest('#scaleSlider')) {
-                    return;
-                }
-                
-                if (currentTracking === 'world' && !worldPlaced) {
-                    placeWorldModel();
-                }
-            });
-        }
+        startBtn.addEventListener('click', initApp);
         
-        // ============================================
-        // DESCARGA DE MARCADORES (OPCIONAL)
-        // ============================================
+        // Pestañas
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(`${btn.dataset.tab}Panel`).classList.add('active');
+            });
+        });
         
-        // Instrucción para descargar marcadores
-        console.log('%c📌 MARCADORES AR.JS', 'color: #2ecc2e; font-size: 16px; font-weight: bold;');
-        console.log('%c1. HIRO marker: https://jeromeetienne.github.io/AR.js/data/images/HIRO.jpg', 'color: #888');
-        console.log('%c2. KANJI marker: https://jeromeetienne.github.io/AR.js/data/images/KANJI.jpg', 'color: #888');
-        console.log('%c3. Generador de marcadores personalizados: https://jeromeetienne.github.io/AR.js/three.js/examples/marker-training/examples/generator.html', 'color: #2ecc2e');
+        scaleSlider.addEventListener('input', (e) => updateScale(e.target.value));
+        recordBtn.addEventListener('click', startRecording);
+        stopRecordingBtn?.addEventListener('click', stopRecording);
+        photoBtn.addEventListener('click', takePhoto);
+        resetBtn.addEventListener('click', resetWorldModel);
         
-        // Advertencia sobre world tracking en AR.js
-        console.log('%c⚠️ NOTA: AR.js no tiene hit-test nativo. El world tracking simula posición frente a cámara.', 'color: #ffaa00');
+        // Tocar pantalla para world tracking
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.ui-container')) return;
+            if (currentTracking === 'world' && !worldPlaced) {
+                placeWorldModel();
+            }
+        });
+        
+        // Instrucciones en consola
+        console.log('%c🎨 AR STUDIO - Para agregar modelos:', 'color: #00ff88; font-size: 12px');
+        console.log('1. Coloca archivos .gltf y .bin en carpeta /models/');
+        console.log('2. Coloca marcadores .patt en carpeta /markers/');
+        console.log('3. Los elementos aparecerán automáticamente en la UI');
     </script>
 </body>
 </html>
